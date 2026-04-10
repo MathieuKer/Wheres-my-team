@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { Team } from '../../types';
 import { MapPin } from 'lucide-react';
 
@@ -10,6 +10,7 @@ interface TeamMarkerProps {
 
 export function TeamMarker({ team, onDoubleClick, onMoveEnd }: TeamMarkerProps) {
   const [localPos, setLocalPos] = useState<{ x: number; y: number } | null>(null);
+  const lastClickTimeRef = useRef<number>(0);
 
   const style: React.CSSProperties = {
     position: 'absolute',
@@ -46,6 +47,15 @@ export function TeamMarker({ team, onDoubleClick, onMoveEnd }: TeamMarkerProps) 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return; // Uniquement le clic gauche
     e.stopPropagation();
+
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 300) {
+      onDoubleClick();
+      lastClickTimeRef.current = 0;
+      return;
+    }
+    lastClickTimeRef.current = now;
+
     const target = e.currentTarget;
     target.setPointerCapture(e.pointerId);
 
@@ -111,10 +121,6 @@ export function TeamMarker({ team, onDoubleClick, onMoveEnd }: TeamMarkerProps) 
 
       <div
         className={innerClass}
-        onDoubleClick={(e) => {
-          e.stopPropagation(); 
-          onDoubleClick();
-        }}
       >
         {/* L'infobulle complète au hover (Reste au-dessus) */}
         <div 
