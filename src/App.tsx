@@ -1,10 +1,13 @@
-import { Users } from 'lucide-react';
+import { Users, LogOut } from 'lucide-react';
+import { useAuth } from './lib/AuthContext';
+import { LoginForm } from './components/auth/LoginForm';
 import { useTeams } from './hooks/useTeams';
 import { useMap } from './hooks/useMap';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { MapContainer } from './components/map/MapContainer';
 
 function App() {
+  const { session, loading, signOut } = useAuth();
   const { 
     teams, 
     addTeam, 
@@ -30,6 +33,19 @@ function App() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="h-screen w-screen bg-background flex flex-col items-center justify-center text-slate-400 gap-4">
+        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+        <p className="animate-pulse">Chargement sécurisé...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginForm />;
+  }
+
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
       
@@ -45,9 +61,18 @@ function App() {
 
       {/* SIDEBAR AREA (10%) */}
       <div className="w-80 flex-shrink-0 bg-surface flex flex-col shadow-xl z-10">
-        <div className="p-4 border-b border-border text-center font-bold text-lg flex items-center gap-2 justify-center bg-slate-900">
-          <Users className="w-5 h-5 text-primary" />
-          Répartition ({teams.length})
+        <div className="p-4 border-b border-border flex items-center justify-between bg-slate-900">
+          <div className="flex items-center gap-2 font-bold text-lg">
+            <Users className="w-5 h-5 text-primary" />
+            Répartition ({teams.length})
+          </div>
+          <button 
+            onClick={signOut} 
+            className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-slate-800 rounded transition-colors" 
+            title="Se déconnecter"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
         
         <Sidebar 
