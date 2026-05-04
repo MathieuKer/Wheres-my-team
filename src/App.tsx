@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Users, LogOut } from 'lucide-react';
 import { useAuth } from './lib/AuthContext';
 import { LoginForm } from './components/auth/LoginForm';
@@ -8,6 +9,15 @@ import { MapContainer } from './components/map/MapContainer';
 
 function App() {
   const { session, loading, signOut } = useAuth();
+  const [showUnicorn, setShowUnicorn] = useState(false);
+
+  const triggerUnicorn = () => {
+    if (showUnicorn) return;
+    setShowUnicorn(true);
+    setTimeout(() => {
+      setShowUnicorn(false);
+    }, 3000);
+  };
   const { 
     teams, 
     addTeam, 
@@ -92,6 +102,27 @@ function App() {
             Flush Événement
           </button>
         </div>
+      </div>
+
+      {/* EASTER EGG */}
+      <button 
+        onClick={triggerUnicorn}
+        className="absolute bottom-2 left-2 z-50 opacity-30 hover:opacity-100 transition-opacity duration-300 cursor-pointer text-2xl select-none grayscale hover:grayscale-0"
+        title="Secret"
+      >
+        🐴
+      </button>
+
+      <div 
+        className={`absolute bottom-0 left-1/2 -translate-x-1/2 z-[9999] transition-transform duration-[1500ms] ease-in-out pointer-events-none ${
+          showUnicorn ? 'translate-y-0' : 'translate-y-full'
+        }`}
+      >
+        <img 
+          src="https://media.giphy.com/media/26AHG5KGFxSkUWw1i/giphy.gif" 
+          alt="Magical Unicorn" 
+          className="h-64 object-contain drop-shadow-2xl"
+        />
       </div>
 
     </div>
