@@ -119,9 +119,7 @@ export function TeamMarker({ team, onDoubleClick, onMoveEnd }: TeamMarkerProps) 
         <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 w-8 h-8 bg-red-500 rounded-full animate-ping opacity-80 pointer-events-none z-[-1]" />
       )}
 
-      <div
-        className={innerClass}
-      >
+      <div className={innerClass}>
         {/* L'infobulle complète au hover (Reste au-dessus) */}
         <div 
           className="absolute bottom-[100%] mb-1 text-xs font-bold px-2 py-0.5 rounded shadow-sm whitespace-nowrap opacity-0 group-hover/outer:opacity-100 transition-opacity drop-shadow-md border border-white/20 z-20 pointer-events-none"
