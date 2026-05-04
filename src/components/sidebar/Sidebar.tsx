@@ -9,11 +9,10 @@ interface SidebarProps {
   onUpdateStatus: (id: string, status: TeamStatus) => void;
   onUpdateColor: (id: string, color: string) => void;
   onDeleteTeam: (id: string) => void;
-  onFlush: () => void;
   onMapUpload: (url: string) => void;
 }
 
-export function Sidebar({ teams, onAddTeam, onUpdateStatus, onUpdateColor, onDeleteTeam, onFlush, onMapUpload }: SidebarProps) {
+export function Sidebar({ teams, onAddTeam, onUpdateStatus, onUpdateColor, onDeleteTeam, onMapUpload }: SidebarProps) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
   const [uploading, setUploading] = useState(false);

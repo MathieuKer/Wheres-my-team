@@ -56,7 +56,6 @@ function App() {
           onUpdateColor={updateTeamColor}
           onUpdateStatus={updateTeamStatus}
           onDeleteTeam={deleteTeam}
-          onFlush={handleFlush}
           onMapUpload={updateMapUrl}
         />
 
