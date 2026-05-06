@@ -7,8 +7,7 @@ import { useMap } from './hooks/useMap';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { MapContainer } from './components/map/MapContainer';
 
-function App() {
-  const { session, loading, signOut } = useAuth();
+function Dashboard({ signOut }: { signOut: () => Promise<void> }) {
   const [showUnicorn, setShowUnicorn] = useState(false);
 
   const triggerUnicorn = () => {
@@ -42,19 +41,6 @@ function App() {
       flushAll();
     }
   };
-
-  if (loading) {
-    return (
-      <div className="h-screen w-screen bg-background flex flex-col items-center justify-center text-slate-400 gap-4">
-        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
-        <p className="animate-pulse">Chargement sécurisé...</p>
-      </div>
-    );
-  }
-
-  if (!session) {
-    return <LoginForm />;
-  }
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-background">
@@ -127,6 +113,25 @@ function App() {
 
     </div>
   );
+}
+
+function App() {
+  const { session, loading, signOut } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="h-screen w-screen bg-background flex flex-col items-center justify-center text-slate-400 gap-4">
+        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
+        <p className="animate-pulse">Chargement sécurisé...</p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <LoginForm />;
+  }
+
+  return <Dashboard signOut={signOut} />;
 }
 
 export default App;
