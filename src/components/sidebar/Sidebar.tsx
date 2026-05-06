@@ -12,7 +12,7 @@ interface SidebarProps {
   onMapUpload: (url: string) => void;
 }
 
-export function Sidebar({ teams, onAddTeam, onUpdateStatus, onUpdateColor, onDeleteTeam, onMapUpload }: SidebarProps) {
+export function Sidebar({ teams, onAddTeam, onUpdateStatus, onUpdateColor, onDeleteTeam, onMapUpload }: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
   const [uploading, setUploading] = useState(false);

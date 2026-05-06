@@ -8,7 +8,7 @@ interface TeamMarkerProps {
   onMoveEnd: (id: string, x: number, y: number) => void;
 }
 
-export function TeamMarker({ team, onDoubleClick, onMoveEnd }: TeamMarkerProps) {
+export function TeamMarker({ team, onDoubleClick, onMoveEnd }: Readonly<TeamMarkerProps>) {
   const [localPos, setLocalPos] = useState<{ x: number; y: number } | null>(null);
   const lastClickTimeRef = useRef<number>(0);
 
@@ -88,8 +88,8 @@ export function TeamMarker({ team, onDoubleClick, onMoveEnd }: TeamMarkerProps) 
     };
 
     const onPointerUp = (upEvent: PointerEvent) => {
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
+      globalThis.removeEventListener('pointermove', onPointerMove);
+      globalThis.removeEventListener('pointerup', onPointerUp);
       
       const currentRect = container.getBoundingClientRect();
       const targetPinX = upEvent.clientX - offsetX;
@@ -105,8 +105,8 @@ export function TeamMarker({ team, onDoubleClick, onMoveEnd }: TeamMarkerProps) 
       onMoveEnd(team.id, percentX, percentY);
     };
 
-    window.addEventListener('pointermove', onPointerMove);
-    window.addEventListener('pointerup', onPointerUp);
+    globalThis.addEventListener('pointermove', onPointerMove);
+    globalThis.addEventListener('pointerup', onPointerUp);
   };
 
   return (

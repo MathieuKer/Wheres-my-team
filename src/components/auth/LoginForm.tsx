@@ -62,12 +62,13 @@ export function LoginForm() {
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300 ml-1">Identifiant</label>
+            <label htmlFor="username" className="text-sm font-medium text-slate-300 ml-1">Identifiant</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 group-focus-within:text-blue-400 transition-colors">
                 <User className="h-5 w-5" />
               </div>
               <input
+                id="username"
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
@@ -79,12 +80,13 @@ export function LoginForm() {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300 ml-1">Mot de passe</label>
+            <label htmlFor="password" className="text-sm font-medium text-slate-300 ml-1">Mot de passe</label>
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 group-focus-within:text-blue-400 transition-colors">
                 <Lock className="h-5 w-5" />
               </div>
               <input
+                id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}

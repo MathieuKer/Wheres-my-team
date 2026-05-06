@@ -11,7 +11,7 @@ interface MapContainerProps {
   onTeamDoubleClick: (id: string, currentStatus: string) => void;
 }
 
-export function MapContainer({ mapUrl, teams, onTeamMove, onTeamDoubleClick }: MapContainerProps) {
+export function MapContainer({ mapUrl, teams, onTeamMove, onTeamDoubleClick }: Readonly<MapContainerProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<any>(null);
 

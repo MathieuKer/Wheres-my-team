@@ -7,7 +7,7 @@ import { useMap } from './hooks/useMap';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { MapContainer } from './components/map/MapContainer';
 
-function Dashboard({ signOut }: { signOut: () => Promise<void> }) {
+function Dashboard({ signOut }: Readonly<{ signOut: () => Promise<void> }>) {
   const [showUnicorn, setShowUnicorn] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -38,7 +38,7 @@ function Dashboard({ signOut }: { signOut: () => Promise<void> }) {
   };
 
   const handleFlush = () => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer toutes les équipes ? Cette action est irréversible et effacera la carte pour tous les utilisateurs.")) {
+    if (globalThis.confirm("Êtes-vous sûr de vouloir supprimer toutes les équipes ? Cette action est irréversible et effacera la carte pour tous les utilisateurs.")) {
       flushAll();
     }
   };
@@ -49,8 +49,15 @@ function Dashboard({ signOut }: { signOut: () => Promise<void> }) {
       {/* MOBILE OVERLAY */}
       {isSidebarOpen && (
         <div 
+          role="button"
+          tabIndex={0}
           className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm transition-opacity"
           onClick={() => setIsSidebarOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              setIsSidebarOpen(false);
+            }
+          }}
         />
       )}
 

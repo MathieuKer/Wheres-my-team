@@ -21,23 +21,25 @@ export function useTeams() {
 
     fetchTeams();
 
+    const handleTeamsChange = (payload: any) => {
+      if (payload.eventType === 'INSERT') {
+        setTeams((prev) => [...prev, payload.new as Team]);
+      } else if (payload.eventType === 'UPDATE') {
+        setTeams((prev) =>
+          prev.map((t) => (t.id === payload.new.id ? (payload.new as Team) : t))
+        );
+      } else if (payload.eventType === 'DELETE') {
+        setTeams((prev) => prev.filter((t) => t.id !== payload.old.id));
+      }
+    };
+
     // S'abonner aux changements en temps réel
     const channel = supabase
       .channel('public:teams')
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'teams' },
-        (payload) => {
-          if (payload.eventType === 'INSERT') {
-            setTeams((prev) => [...prev, payload.new as Team]);
-          } else if (payload.eventType === 'UPDATE') {
-            setTeams((prev) =>
-              prev.map((t) => (t.id === payload.new.id ? (payload.new as Team) : t))
-            );
-          } else if (payload.eventType === 'DELETE') {
-            setTeams((prev) => prev.filter((t) => t.id !== payload.old.id));
-          }
-        }
+        handleTeamsChange
       )
       .subscribe();
 
