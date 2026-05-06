@@ -48,16 +48,11 @@ function Dashboard({ signOut }: Readonly<{ signOut: () => Promise<void> }>) {
       
       {/* MOBILE OVERLAY */}
       {isSidebarOpen && (
-        <div 
-          role="button"
-          tabIndex={0}
-          className="fixed inset-0 bg-black/60 z-30 md:hidden backdrop-blur-sm transition-opacity"
+        <button 
+          type="button"
+          aria-label="Fermer le menu"
+          className="fixed inset-0 w-full h-full bg-black/60 z-30 md:hidden backdrop-blur-sm transition-opacity cursor-default border-none"
           onClick={() => setIsSidebarOpen(false)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              setIsSidebarOpen(false);
-            }
-          }}
         />
       )}
 

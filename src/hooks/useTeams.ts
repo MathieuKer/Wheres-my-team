@@ -2,6 +2,18 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Team, TeamStatus } from '../types';
 
+function insertTeam(prev: Team[], newTeam: Team): Team[] {
+  return [...prev, newTeam];
+}
+
+function updateTeamInList(prev: Team[], updatedTeam: Team): Team[] {
+  return prev.map((t) => (t.id === updatedTeam.id ? updatedTeam : t));
+}
+
+function removeTeamFromList(prev: Team[], deletedId: string): Team[] {
+  return prev.filter((t) => t.id !== deletedId);
+}
+
 export function useTeams() {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
@@ -23,13 +35,11 @@ export function useTeams() {
 
     const handleTeamsChange = (payload: any) => {
       if (payload.eventType === 'INSERT') {
-        setTeams((prev) => [...prev, payload.new as Team]);
+        setTeams((prev) => insertTeam(prev, payload.new as Team));
       } else if (payload.eventType === 'UPDATE') {
-        setTeams((prev) =>
-          prev.map((t) => (t.id === payload.new.id ? (payload.new as Team) : t))
-        );
+        setTeams((prev) => updateTeamInList(prev, payload.new as Team));
       } else if (payload.eventType === 'DELETE') {
-        setTeams((prev) => prev.filter((t) => t.id !== payload.old.id));
+        setTeams((prev) => removeTeamFromList(prev, payload.old.id));
       }
     };
 
