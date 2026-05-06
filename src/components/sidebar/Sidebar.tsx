@@ -31,7 +31,7 @@ export function Sidebar({ teams, onAddTeam, onUpdateStatus, onUpdateColor, onDel
 
     setUploading(true);
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
+    const fileName = `${crypto.randomUUID()}.${fileExt}`;
     const filePath = `plans/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
