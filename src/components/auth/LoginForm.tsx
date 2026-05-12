@@ -28,8 +28,12 @@ export function LoginForm() {
       if (error) {
         throw new Error("Identifiants incorrects ou utilisateur inexistant.");
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Une erreur inconnue est survenue.");
+      }
     } finally {
       setLoading(false);
     }

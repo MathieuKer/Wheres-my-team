@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Users, LogOut, Menu, X } from 'lucide-react';
-import { useAuth } from './lib/AuthContext';
+import { useAuth } from './hooks/useAuth';
 import { LoginForm } from './components/auth/LoginForm';
 import { useTeams } from './hooks/useTeams';
 import { useMap } from './hooks/useMap';
 import { Sidebar } from './components/sidebar/Sidebar';
 import { MapContainer } from './components/map/MapContainer';
+import type { TeamStatus } from './types';
 
 function Dashboard({ signOut }: Readonly<{ signOut: () => Promise<void> }>) {
   const [showUnicorn, setShowUnicorn] = useState(false);
@@ -34,7 +35,7 @@ function Dashboard({ signOut }: Readonly<{ signOut: () => Promise<void> }>) {
     // Si déjà en intervention, on repasse dispo (ou pause)
     // Sinon on passe en intervention "flash rouge"
     const newStatus = currentStatus === 'intervention' ? 'dispo' : 'intervention';
-    updateTeamStatus(id, newStatus as any);
+    updateTeamStatus(id, newStatus as TeamStatus);
   };
 
   const handleFlush = () => {

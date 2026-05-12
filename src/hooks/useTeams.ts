@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Team, TeamStatus } from '../types';
+import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
 function insertTeam(prev: Team[], newTeam: Team): Team[] {
   return [...prev, newTeam];
@@ -33,13 +34,13 @@ export function useTeams() {
 
     fetchTeams();
 
-    const handleTeamsChange = (payload: any) => {
+    const handleTeamsChange = (payload: RealtimePostgresChangesPayload<Team>) => {
       if (payload.eventType === 'INSERT') {
         setTeams((prev) => insertTeam(prev, payload.new as Team));
       } else if (payload.eventType === 'UPDATE') {
         setTeams((prev) => updateTeamInList(prev, payload.new as Team));
       } else if (payload.eventType === 'DELETE') {
-        setTeams((prev) => removeTeamFromList(prev, payload.old.id));
+        setTeams((prev) => removeTeamFromList(prev, (payload.old as { id: string }).id));
       }
     };
 

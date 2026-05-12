@@ -1,5 +1,6 @@
 import { useRef } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
+import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import type { Team } from '../../types';
 import { TeamMarker } from './TeamMarker';
 import { MapIcon } from 'lucide-react';
@@ -13,7 +14,7 @@ interface MapContainerProps {
 
 export function MapContainer({ mapUrl, teams, onTeamMove, onTeamDoubleClick }: Readonly<MapContainerProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const transformRef = useRef<any>(null);
+  const transformRef = useRef<ReactZoomPanPinchRef>(null);
 
   if (!mapUrl) {
     return (
@@ -41,7 +42,6 @@ export function MapContainer({ mapUrl, teams, onTeamMove, onTeamDoubleClick }: R
           <div id="map-bounds-container" ref={containerRef} className="relative shadow-2xl" style={{ border: '2px solid #334155' }}>
             
             {/* L'image de la carte */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img 
               src={mapUrl} 
               alt="Map Plan" 
