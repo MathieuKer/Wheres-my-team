@@ -9,7 +9,10 @@ export function AuthProvider({ children }: Readonly<{ children: React.ReactNode 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error("Erreur de session Supabase:", error);
+      }
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
