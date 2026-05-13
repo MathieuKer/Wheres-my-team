@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useMemo, memo } from 'react';
 import type { Team, TeamStatus } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { Trash2, AlertTriangle, Coffee, Play, UploadCloud } from 'lucide-react';
+import { ColorPicker } from './ColorPicker';
 
 interface SidebarProps {
   teams: Team[];
@@ -12,16 +13,33 @@ interface SidebarProps {
   onMapUpload: (url: string) => void;
 }
 
-export function Sidebar({ teams, onAddTeam, onUpdateStatus, onUpdateColor, onDeleteTeam, onMapUpload }: Readonly<SidebarProps>) {
+export const Sidebar = memo(function Sidebar({ 
+  teams, 
+  onAddTeam, 
+  onUpdateStatus, 
+  onUpdateColor, 
+  onDeleteTeam, 
+  onMapUpload 
+}: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
   const [uploading, setUploading] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
 
-  const handleAdd = (e: React.FormEvent) => {
+  const sortedTeams = useMemo(() => {
+    return [...teams].sort((a, b) => a.name.localeCompare(b.name));
+  }, [teams]);
+
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newName.trim()) {
-      onAddTeam(newName, newColor);
-      setNewName('');
+    if (newName.trim() && !isAdding) {
+      setIsAdding(true);
+      try {
+        await onAddTeam(newName, newColor);
+        setNewName('');
+      } finally {
+        setIsAdding(false);
+      }
     }
   };
 
@@ -49,91 +67,89 @@ export function Sidebar({ teams, onAddTeam, onUpdateStatus, onUpdateColor, onDel
   };
 
   return (
-    <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-6">
+    <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-8 custom-scrollbar">
       
       {/* Upload Carte */}
-      <div className="bg-slate-800 p-3 rounded-lg border border-slate-700">
-        <label className="flex items-center justify-center gap-2 cursor-pointer bg-slate-700 hover:bg-slate-600 transition-colors py-2 rounded text-sm text-slate-300">
-           <UploadCloud className="w-4 h-4" />
-           {uploading ? 'Upload en cours...' : 'Changer le plan'}
+      <div className="glass-card p-1 rounded-2xl overflow-hidden">
+        <label className="flex items-center justify-center gap-3 cursor-pointer bg-white/5 hover:bg-white/10 transition-all duration-300 py-3 rounded-xl text-sm font-semibold text-slate-300 group">
+           <UploadCloud className="w-5 h-5 text-blue-400 group-hover:scale-110 transition-transform" aria-hidden="true" />
+           {uploading ? 'Upload en cours…' : 'Changer le plan'}
            <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading}/>
         </label>
       </div>
 
       {/* Ajout Équipe */}
-      <form onSubmit={handleAdd} className="flex flex-col gap-2 bg-slate-800 p-3 rounded-lg border border-slate-700">
-        <div className="text-sm font-semibold text-slate-400 mb-1">Nouvelle Équipe</div>
+      <form onSubmit={handleAdd} className="flex flex-col gap-3 glass-card p-4 rounded-2xl relative focus-within:z-[60] hover:z-[60] transition-all">
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 font-display">Nouvelle Équipe</div>
         <input 
           type="text" 
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Ex: Unité Alpha" 
-          className="bg-slate-900 border border-slate-700 rounded px-3 py-1.5 text-sm focus:outline-none focus:border-primary"
+          placeholder="Ex: Unité Alpha…" 
+          className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
         />
         <div className="flex gap-2">
-          <input 
-            type="color" 
-            value={newColor}
-            onChange={(e) => setNewColor(e.target.value)}
-            className="h-8 w-1/3 bg-transparent border-none rounded cursor-pointer"
-          />
-          <button type="submit" className="flex-1 bg-primary hover:bg-primary/80 transition-colors rounded text-sm text-white font-medium">
-            Ajouter
+          <div className="h-10 w-1/4 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
+            <ColorPicker color={newColor} onChange={setNewColor} />
+          </div>
+          <button 
+            type="submit" 
+            disabled={isAdding}
+            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all rounded-xl text-sm text-white font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isAdding ? 'Ajout…' : "Ajouter l'Unité"}
           </button>
         </div>
       </form>
 
       {/* Liste Équipes */}
-      <div className="flex flex-col gap-1.5">
-        <div className="text-sm font-semibold text-slate-400 mb-1 flex justify-between items-center">
-          <span>Sur le terrain ({teams.length})</span>
+      <div className="flex flex-col gap-3">
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex justify-between items-center font-display">
+          <span>Unités sur le terrain ({teams.length})</span>
         </div>
-        {[...teams].sort((a, b) => a.name.localeCompare(b.name)).map(team => (
-           <div key={team.id} className="flex items-center gap-2 bg-slate-800 p-1.5 rounded border border-slate-700/50">
+        {sortedTeams.map(team => (
+           <div key={team.id} className="flex items-center gap-3 glass-card p-2 rounded-xl group/team relative focus-within:z-[60] hover:z-[60] transition-all">
               
-              <div className="relative group/color shrink-0 w-4 h-4 flex items-center justify-center">
-                <input 
-                  type="color" 
-                  value={team.color} 
-                  onChange={(e) => onUpdateColor(team.id, e.target.value)}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  title="Changer la couleur"
-                />
-                <div className="w-3.5 h-3.5 rounded-sm border border-slate-600 transition-transform group-hover/color:scale-110" style={{backgroundColor: team.color}}></div>
+              <div className="shrink-0 w-6 h-6 flex items-center justify-center">
+                <ColorPicker color={team.color} onChange={(c) => onUpdateColor(team.id, c)} />
               </div>
 
-              <span className="font-medium text-xs text-slate-200 truncate flex-1" title={team.name}>{team.name}</span>
+              <span className="font-semibold text-sm text-slate-200 truncate flex-1 font-display" title={team.name}>{team.name}</span>
               
-              <div className="flex items-center gap-0.5 shrink-0 bg-slate-900/50 rounded p-0.5 border border-slate-700/50">
+              <div className="flex items-center gap-1 shrink-0 bg-black/20 rounded-lg p-1 border border-white/5">
                 <button 
                   onClick={() => onUpdateStatus(team.id, 'dispo')}
-                  className={`p-1.5 rounded transition-colors ${team.status === 'dispo' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-700/50 hover:text-slate-300'}`}
-                  title="Disponible"
+                  className={`p-1.5 rounded-md transition-all ${team.status === 'dispo' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}
+                  aria-label="Marquer comme disponible"
                 >
-                  <Play className="w-3.5 h-3.5"/>
+                  <Play className="w-4 h-4" aria-hidden="true" />
                 </button>
                 <button 
                   onClick={() => onUpdateStatus(team.id, 'intervention')}
-                  className={`p-1.5 rounded transition-colors ${team.status === 'intervention' ? 'bg-red-900/80 text-red-400 shadow-sm animate-pulse' : 'text-slate-500 hover:bg-slate-700/50 hover:text-red-400'}`}
-                  title="En Urgence"
+                  className={`p-1.5 rounded-md transition-all ${team.status === 'intervention' ? 'bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse' : 'text-slate-500 hover:bg-white/5 hover:text-red-400'}`}
+                  aria-label="Marquer en intervention"
                 >
-                  <AlertTriangle className="w-3.5 h-3.5"/>
+                  <AlertTriangle className="w-4 h-4" aria-hidden="true" />
                 </button>
                 <button 
                   onClick={() => onUpdateStatus(team.id, 'pause')}
-                  className={`p-1.5 rounded transition-colors ${team.status === 'pause' ? 'bg-slate-700 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-700/50 hover:text-slate-300'}`}
-                  title="En Pause"
+                  className={`p-1.5 rounded-md transition-all ${team.status === 'pause' ? 'bg-amber-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-amber-400'}`}
+                  aria-label="Marquer en pause"
                 >
-                  <Coffee className="w-3.5 h-3.5"/>
+                  <Coffee className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
 
-              <button onClick={() => onDeleteTeam(team.id)} className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-slate-800 rounded transition-colors ml-1" title="Supprimer l'équipe">
-                <Trash2 className="w-3.5 h-3.5" />
+              <button 
+                onClick={() => onDeleteTeam(team.id)} 
+                className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/team:opacity-100" 
+                aria-label="Supprimer l'équipe"
+              >
+                <Trash2 className="w-4 h-4" aria-hidden="true" />
               </button>
            </div>
         ))}
       </div>
     </div>
   );
-}
+});
