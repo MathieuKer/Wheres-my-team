@@ -26,3 +26,7 @@ env.local
 *.njsproj
 *.sln
 *.sw?
+
+# AI Agents directories
+.agent/
+.agents/
