@@ -1,6 +1,6 @@
 import { useState, useRef, memo } from 'react';
 import type { Team } from '../../types';
-import { MapPin, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, MapPin } from 'lucide-react';
 
 interface TeamMarkerProps {
   team: Team;
@@ -151,7 +151,7 @@ export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMove
         
         <MapPin 
           className={`w-11 h-11 ${iconClass} filter drop-shadow-lg relative z-10`} 
-          style={{ fill: pinFill, color: pinStroke }} 
+          style={{ fill: pinFill, color: pinStroke, strokeWidth: 2.5 }} 
           aria-hidden="true"
         />
 

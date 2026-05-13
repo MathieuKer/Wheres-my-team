@@ -3,6 +3,7 @@ import type { Team, TeamStatus } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { Trash2, AlertTriangle, Coffee, Play, UploadCloud } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface SidebarProps {
   teams: Team[];
@@ -25,6 +26,7 @@ export const Sidebar = memo(function Sidebar({
   const [newColor, setNewColor] = useState('#3b82f6');
   const [uploading, setUploading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
 
   const sortedTeams = useMemo(() => {
     return [...teams].sort((a, b) => a.name.localeCompare(b.name));
@@ -32,14 +34,23 @@ export const Sidebar = memo(function Sidebar({
 
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newName.trim() && !isAdding) {
-      setIsAdding(true);
-      try {
-        await onAddTeam(newName, newColor);
-        setNewName('');
-      } finally {
-        setIsAdding(false);
-      }
+    const cleanName = newName.trim();
+    if (!cleanName || isAdding) return;
+
+    if (teams.some(t => t.name.toLowerCase() === cleanName.toLowerCase())) {
+      alert(`Impossible de créer l'unité : Le nom "${cleanName}" existe déjà sur la carte.`);
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      await onAddTeam(cleanName, newColor);
+      setNewName('');
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de la création de l'unité.");
+    } finally {
+      setIsAdding(false);
     }
   };
 
@@ -88,8 +99,8 @@ export const Sidebar = memo(function Sidebar({
           placeholder="Ex: Unité Alpha…" 
           className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
         />
-        <div className="flex gap-2">
-          <div className="h-10 w-1/4 bg-white/5 border border-white/10 rounded-xl flex items-center justify-center">
+        <div className="flex gap-2 relative focus-within:z-[60]">
+          <div className="h-10 w-[20%] bg-white/5 border border-white/10 rounded-xl flex items-center justify-center shrink-0">
             <ColorPicker color={newColor} onChange={setNewColor} />
           </div>
           <button 
@@ -141,7 +152,7 @@ export const Sidebar = memo(function Sidebar({
               </div>
 
               <button 
-                onClick={() => onDeleteTeam(team.id)} 
+                onClick={() => setTeamToDelete(team)} 
                 className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/team:opacity-100" 
                 aria-label="Supprimer l'équipe"
               >
@@ -150,6 +161,20 @@ export const Sidebar = memo(function Sidebar({
            </div>
         ))}
       </div>
+
+      <ConfirmDialog 
+        isOpen={!!teamToDelete}
+        title="Supprimer l'unité"
+        message={
+          <p>Êtes-vous sûr de vouloir supprimer l'unité <strong className="text-white">{teamToDelete?.name}</strong> ?<br/><span className="text-red-400 text-xs">Cette action est irréversible.</span></p>
+        }
+        confirmText="Supprimer"
+        onConfirm={() => {
+          if (teamToDelete) onDeleteTeam(teamToDelete.id);
+          setTeamToDelete(null);
+        }}
+        onCancel={() => setTeamToDelete(null)}
+      />
     </div>
   );
 });

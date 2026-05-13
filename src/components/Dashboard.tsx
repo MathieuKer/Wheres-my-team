@@ -1,19 +1,21 @@
 import { useState } from 'react';
-import { Users, LogOut, Menu, X } from 'lucide-react';
+import { Users, LogOut, Menu, X, ArrowLeft } from 'lucide-react';
 import { useSquadMap } from '../hooks/useSquadMap';
 import { Sidebar } from './sidebar/Sidebar';
 import { MapContainer } from './map/MapContainer';
 
 interface DashboardProps {
+  mapId: string;
+  onBack: () => void;
   signOut: () => Promise<void>;
 }
 
-export function Dashboard({ signOut }: Readonly<DashboardProps>) {
+export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) {
   const [showUnicorn, setShowUnicorn] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Utilisation de l'orchestrateur profond
-  const { state, actions } = useSquadMap();
+  // Utilisation de l'orchestrateur profond avec l'ID de la carte
+  const { state, actions } = useSquadMap(mapId);
 
   const triggerUnicorn = () => {
     if (showUnicorn) return;
@@ -60,9 +62,13 @@ export function Dashboard({ signOut }: Readonly<DashboardProps>) {
       <div className={`fixed inset-y-0 right-0 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} md:translate-x-0 md:relative md:flex w-85 sm:w-96 md:w-80 max-w-[85vw] flex-shrink-0 glass-panel flex-col shadow-2xl z-40 transition-transform duration-500 ease-in-out md:border-none rounded-l-[2.5rem] md:rounded-none`}>
         <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/20">
           <div className="flex items-center gap-3 font-bold text-xl font-display">
-            <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/30">
-              <Users className="w-5 h-5 text-blue-400" aria-hidden="true" />
-            </div>
+            <button 
+              onClick={onBack}
+              className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center border border-white/10 transition-colors"
+              title="Retour aux cartes"
+            >
+              <ArrowLeft className="w-4 h-4 text-slate-400" />
+            </button>
             <span className="premium-gradient-text">Répartition</span>
             <span className="text-xs bg-white/5 px-2 py-0.5 rounded-full text-slate-500 border border-white/5">{state.teams.length}</span>
           </div>

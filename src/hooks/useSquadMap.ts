@@ -8,60 +8,72 @@ import type { TeamStatus } from '../types';
  * Orchestrateur de domaine "SquadMap".
  * Implémentation profonde gérant la persistance via les Repositories.
  */
-export function useSquadMap() {
-  const { data: teams = [], isLoading: loadingTeams } = useSWR('teams', () => teamsRepo.getAll());
-  const { data: mapSettings, isLoading: loadingMap } = useSWR('map', () => mapRepo.getSettings());
+export function useSquadMap(mapId: string | null) {
+  const { data: teams = [], isLoading: loadingTeams } = useSWR(mapId ? ['teams', mapId] : null, () => teamsRepo.getAll(mapId!));
+  const { data: mapSettings, isLoading: loadingMap } = useSWR(mapId ? ['map', mapId] : null, () => mapRepo.getById(mapId!));
 
   const [isAdding, setIsAdding] = useState(false);
 
   useEffect(() => {
-    const unsubscribeTeams = teamsRepo.subscribe(() => {
-      mutate('teams');
+    if (!mapId) return;
+    
+    const unsubscribeTeams = teamsRepo.subscribe(mapId, () => {
+      mutate(['teams', mapId]);
     });
-    const unsubscribeMap = mapRepo.subscribe(() => {
-      mutate('map');
+    
+    // We don't have a mapId specific subscribe on mapRepo yet, but we can subscribe to all and filter, 
+    // or just rely on the mapRepo.subscribe implementation. For now it listens to all maps.
+    const unsubscribeMap = mapRepo.subscribe((payload) => {
+      if (payload.new && (payload.new as any).id === mapId) {
+        mutate(['map', mapId]);
+      }
     });
+    
     return () => {
       unsubscribeTeams();
       unsubscribeMap();
     };
-  }, []);
+  }, [mapId]);
 
   const addTeam = async (name: string, color: string) => {
-    if (isAdding) return;
+    if (isAdding || !mapId) return;
     setIsAdding(true);
     try {
-      await teamsRepo.create(name, color);
-      mutate('teams');
+      await teamsRepo.create(mapId, name, color);
+      mutate(['teams', mapId]);
     } finally {
       setIsAdding(false);
     }
   };
 
   const updateTeamPosition = async (id: string, x: number, y: number) => {
-    // Optimistic UI : on met à jour localement d'abord pour une interface fluide
-    mutate('teams', teams.map(t => t.id === id ? { ...t, pos_x: x, pos_y: y } : t), false);
+    if (!mapId) return;
+    mutate(['teams', mapId], teams.map(t => t.id === id ? { ...t, pos_x: x, pos_y: y } : t), false);
     await teamsRepo.update(id, { pos_x: x, pos_y: y });
   };
 
   const updateTeamColor = async (id: string, color: string) => {
-    mutate('teams', teams.map(t => t.id === id ? { ...t, color } : t), false);
+    if (!mapId) return;
+    mutate(['teams', mapId], teams.map(t => t.id === id ? { ...t, color } : t), false);
     await teamsRepo.update(id, { color });
   };
 
   const updateTeamStatus = async (id: string, status: TeamStatus) => {
-    mutate('teams', teams.map(t => t.id === id ? { ...t, status } : t), false);
+    if (!mapId) return;
+    mutate(['teams', mapId], teams.map(t => t.id === id ? { ...t, status } : t), false);
     await teamsRepo.update(id, { status });
   };
 
   const deleteTeam = async (id: string) => {
-    mutate('teams', teams.filter(t => t.id !== id), false);
+    if (!mapId) return;
+    mutate(['teams', mapId], teams.filter(t => t.id !== id), false);
     await teamsRepo.delete(id);
   };
 
   const flushAll = async () => {
-    mutate('teams', [], false);
-    await teamsRepo.deleteAll();
+    if (!mapId) return;
+    mutate(['teams', mapId], [], false);
+    await teamsRepo.deleteAll(mapId);
   };
 
   const toggleIntervention = (id: string, currentStatus: string) => {
@@ -76,8 +88,9 @@ export function useSquadMap() {
   };
 
   const updateMapUrl = async (url: string | null) => {
-    mutate('map', { image_url: url }, false);
-    await mapRepo.updateImageUrl(url);
+    if (!mapId) return;
+    mutate(['map', mapId], { ...mapSettings, image_url: url }, false);
+    await mapRepo.update(mapId, { image_url: url });
   };
 
   return {

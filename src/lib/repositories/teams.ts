@@ -7,26 +7,26 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
  * C'est notre "Seam" (couture) : on peut changer l'implémentation sans toucher au reste.
  */
 export interface TeamRepository {
-  getAll(): Promise<Team[]>;
-  create(name: string, color: string): Promise<void>;
+  getAll(mapId: string): Promise<Team[]>;
+  create(mapId: string, name: string, color: string): Promise<void>;
   update(id: string, updates: Partial<Team>): Promise<void>;
   delete(id: string): Promise<void>;
-  deleteAll(): Promise<void>;
-  subscribe(callback: (payload: RealtimePostgresChangesPayload<Team>) => void): () => void;
+  deleteAll(mapId: string): Promise<void>;
+  subscribe(mapId: string, callback: (payload: RealtimePostgresChangesPayload<Team>) => void): () => void;
 }
 
 /**
  * Implémentation concrète pour Supabase.
  */
 export const supabaseTeamRepository: TeamRepository = {
-  async getAll() {
-    const { data, error } = await supabase.from('teams').select('*');
+  async getAll(mapId) {
+    const { data, error } = await supabase.from('teams').select('*').eq('map_id', mapId);
     if (error) throw error;
     return data || [];
   },
 
-  async create(name, color) {
-    const { error } = await supabase.from('teams').insert([{ name, color }]);
+  async create(mapId, name, color) {
+    const { error } = await supabase.from('teams').insert([{ map_id: mapId, name, color }]);
     if (error) throw error;
   },
 
@@ -40,20 +40,20 @@ export const supabaseTeamRepository: TeamRepository = {
     if (error) throw error;
   },
 
-  async deleteAll() {
+  async deleteAll(mapId) {
     const { error } = await supabase
       .from('teams')
       .delete()
-      .neq('id', '00000000-0000-0000-0000-000000000000');
+      .eq('map_id', mapId);
     if (error) throw error;
   },
 
-  subscribe(callback) {
+  subscribe(mapId, callback) {
     const channel = supabase
-      .channel('public:teams')
+      .channel(`public:teams:${mapId}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'teams' },
+        { event: '*', schema: 'public', table: 'teams', filter: `map_id=eq.${mapId}` },
         callback
       )
       .subscribe();

@@ -1,7 +1,8 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 
 const LoginForm = lazy(() => import('./components/auth/LoginForm').then(m => ({ default: m.LoginForm })));
+const MapList = lazy(() => import('./components/MapList').then(m => ({ default: m.MapList })));
 const Dashboard = lazy(() => import('./components/Dashboard').then(m => ({ default: m.Dashboard })));
 
 function LoadingFallback() {
@@ -15,6 +16,7 @@ function LoadingFallback() {
 
 function App() {
   const { session, loading, signOut } = useAuth();
+  const [selectedMapId, setSelectedMapId] = useState<string | null>(null);
 
   if (loading) {
     return <LoadingFallback />;
@@ -24,8 +26,10 @@ function App() {
     <Suspense fallback={<LoadingFallback />}>
       {!session ? (
         <LoginForm />
+      ) : !selectedMapId ? (
+        <MapList onSelectMap={setSelectedMapId} signOut={signOut} />
       ) : (
-        <Dashboard signOut={signOut} />
+        <Dashboard mapId={selectedMapId} onBack={() => setSelectedMapId(null)} signOut={signOut} />
       )}
     </Suspense>
   );

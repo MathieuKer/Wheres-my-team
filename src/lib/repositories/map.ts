@@ -1,43 +1,73 @@
 import { supabase } from '../supabase';
+import type { SquadMap } from '../../types';
 import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 
-export interface MapSettings {
-  image_url: string | null;
-}
-
 export interface MapRepository {
-  getSettings(): Promise<MapSettings>;
-  updateImageUrl(url: string | null): Promise<void>;
-  subscribe(callback: (payload: RealtimePostgresChangesPayload<any>) => void): () => void;
+  getAll(): Promise<SquadMap[]>;
+  getById(id: string): Promise<SquadMap>;
+  create(name: string): Promise<SquadMap>;
+  update(id: string, updates: Partial<SquadMap>): Promise<void>;
+  delete(id: string): Promise<void>;
+  subscribe(callback: (payload: RealtimePostgresChangesPayload<SquadMap>) => void): () => void;
 }
 
 export const supabaseMapRepository: MapRepository = {
-  async getSettings() {
+  async getAll() {
     const { data, error } = await supabase
-      .from('map_settings')
-      .select('image_url')
-      .eq('id', 1)
-      .single();
-    
+      .from('maps')
+      .select('*')
+      .order('created_at', { ascending: false });
     if (error) throw error;
-    return data as MapSettings;
+    return data || [];
   },
 
-  async updateImageUrl(url) {
+  async getById(id) {
+    const { data, error } = await supabase
+      .from('maps')
+      .select('*')
+      .eq('id', id)
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async create(name) {
+    // RLS will automatically set owner_id if we do it via a function, but here we let the DB handle it if possible, 
+    // OR we must supply owner_id. Let's retrieve user id.
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Non authentifié");
+
+    const { data, error } = await supabase
+      .from('maps')
+      .insert([{ name, owner_id: user.id }])
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  },
+
+  async update(id, updates) {
     const { error } = await supabase
-      .from('map_settings')
-      .update({ image_url: url })
-      .eq('id', 1);
-    
+      .from('maps')
+      .update(updates)
+      .eq('id', id);
+    if (error) throw error;
+  },
+
+  async delete(id) {
+    const { error } = await supabase
+      .from('maps')
+      .delete()
+      .eq('id', id);
     if (error) throw error;
   },
 
   subscribe(callback) {
     const channel = supabase
-      .channel('public:map_settings')
+      .channel('public:maps')
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'map_settings' },
+        { event: '*', schema: 'public', table: 'maps' },
         callback
       )
       .subscribe();

@@ -2,6 +2,7 @@ export type TeamStatus = 'dispo' | 'intervention' | 'pause';
 
 export interface Team {
   id: string;
+  map_id: string;
   name: string;
   color: string;
   pos_x: number;
@@ -10,7 +11,24 @@ export interface Team {
   updated_at: string;
 }
 
-export interface MapSettings {
-  id: number;
+export interface SquadMap {
+  id: string;
+  name: string;
+  owner_id: string;
   image_url: string | null;
+  created_at: string;
+}
+
+export interface Zone {
+  id: string;
+  map_id: string;
+  name: string;
+  color: string;
+  bounds: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  created_at: string;
 }
