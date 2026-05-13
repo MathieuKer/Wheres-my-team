@@ -1,6 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, memo } from 'react';
 import type { Team } from '../../types';
-import { MapPin } from 'lucide-react';
+import { MapPin, AlertTriangle } from 'lucide-react';
 
 interface TeamMarkerProps {
   team: Team;
@@ -8,7 +8,7 @@ interface TeamMarkerProps {
   onMoveEnd: (id: string, x: number, y: number) => void;
 }
 
-export function TeamMarker({ team, onDoubleClick, onMoveEnd }: Readonly<TeamMarkerProps>) {
+export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMoveEnd }: Readonly<TeamMarkerProps>) {
   const [localPos, setLocalPos] = useState<{ x: number; y: number } | null>(null);
   const lastClickTimeRef = useRef<number>(0);
 
@@ -22,22 +22,21 @@ export function TeamMarker({ team, onDoubleClick, onMoveEnd }: Readonly<TeamMark
     touchAction: 'none',
   };
 
-  let innerClass = "transition-transform hover:scale-110 flex flex-col items-center group relative";
-  let iconClass = "";
+  let innerClass = "transition-all duration-300 hover:scale-110 flex flex-col items-center group relative";
+  let iconClass = "transition-all duration-300";
   let pinFill = team.color;
-  let pinStroke = team.color;
+  let pinStroke = '#ffffff'; 
   
   if (team.status === 'intervention') {
     innerClass += " animate-bounce";
-    iconClass = "drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]";
-    pinFill = '#ef4444'; 
+    iconClass = `drop-shadow-[0_0_15px_${team.color}cc]`;
+    pinFill = team.color; 
     pinStroke = '#ffffff'; 
   } else if (team.status === 'pause') {
-    iconClass = "opacity-80";
-    pinStroke = '#475569'; 
+    iconClass = "opacity-60 grayscale-[0.5]";
+    pinStroke = '#94a3b8'; 
   }
 
-  // Génération de l'abréviation (ex: "Unité Alpha" -> "UA", "Médical" -> "MÉD")
   const getAbbrev = (name: string) => {
     const words = name.split(' ').filter(Boolean);
     if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
@@ -45,7 +44,7 @@ export function TeamMarker({ team, onDoubleClick, onMoveEnd }: Readonly<TeamMark
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.button !== 0) return; // Uniquement le clic gauche
+    if (e.button !== 0) return; 
     e.stopPropagation();
 
     const now = Date.now();
@@ -69,7 +68,6 @@ export function TeamMarker({ team, onDoubleClick, onMoveEnd }: Readonly<TeamMark
     const pinScreenX = rect.left + (currentX / 100) * rect.width;
     const pinScreenY = rect.top + (currentY / 100) * rect.height;
     
-    // Décalage pour eviter que le point "saute" vers le milieu de la souris si cliqué sur le bord.
     const offsetX = e.clientX - pinScreenX;
     const offsetY = e.clientY - pinScreenY;
 
@@ -115,29 +113,56 @@ export function TeamMarker({ team, onDoubleClick, onMoveEnd }: Readonly<TeamMark
       onPointerDown={handlePointerDown}
       className="nodrag group/outer relative"
     >
-      {team.status === 'intervention' && (
-        <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-1/2 w-8 h-8 bg-red-500 rounded-full animate-ping opacity-80 pointer-events-none z-[-1]" />
-      )}
-
       <div className={innerClass}>
-        {/* L'infobulle complète au hover (Reste au-dessus) */}
+        {/* Effet d'intervention: Ping et Badge */}
+        {team.status === 'intervention' ? (
+          <>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[65%] w-12 h-12 pointer-events-none">
+              <div 
+                className="absolute inset-0 rounded-full animate-ping opacity-30" 
+                style={{ backgroundColor: team.color }}
+              />
+              <div 
+                className="absolute inset-0 rounded-full animate-pulse opacity-15" 
+                style={{ backgroundColor: team.color }}
+              />
+            </div>
+            
+            {/* Badge de notification inversé */}
+            <div 
+              className="absolute top-0 right-0 translate-x-[20%] -translate-y-[20%] z-30 flex items-center justify-center w-[22px] h-[22px] rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] border-2 border-white"
+              style={{ backgroundColor: team.color }}
+            >
+              <AlertTriangle className="w-3 h-3 text-white fill-white animate-pulse" />
+            </div>
+          </>
+        ) : null}
+
         <div 
-          className="absolute bottom-[100%] mb-1 text-xs font-bold px-2 py-0.5 rounded shadow-sm whitespace-nowrap opacity-0 group-hover/outer:opacity-100 transition-opacity drop-shadow-md border border-white/20 z-20 pointer-events-none"
-          style={{ backgroundColor: team.status === 'intervention' ? '#ef4444' : team.color, color: '#fff' }}
+          className="absolute bottom-[110%] mb-1 text-[11px] font-bold px-3 py-1 rounded-full shadow-2xl whitespace-nowrap opacity-0 group-hover/outer:opacity-100 transition-all duration-300 translate-y-2 group-hover/outer:translate-y-0 border border-white/20 z-20 pointer-events-none font-display backdrop-blur-md"
+          style={{ 
+            backgroundColor: `${team.color}e6`, 
+            color: '#fff',
+            boxShadow: `0 10px 15px -3px ${team.color}44`
+          }}
         >
           {team.name}
         </div>
         
         <MapPin 
-          className={`w-10 h-10 ${iconClass} transition-colors`} 
+          className={`w-11 h-11 ${iconClass} filter drop-shadow-lg relative z-10`} 
           style={{ fill: pinFill, color: pinStroke }} 
+          aria-hidden="true"
         />
 
-        {/* L'abréviation permanente (S'affiche sous la pastille) */}
-        <div className="absolute top-[90%] left-1/2 -translate-x-1/2 mt-0.5 text-[10px] font-black leading-none px-1.5 py-0.5 rounded shadow-sm whitespace-nowrap bg-white text-slate-800 border border-slate-200 pointer-events-none z-10">
+        {/* L'abréviation permanente */}
+        <div 
+          className="absolute top-[85%] left-1/2 -translate-x-1/2 mt-0.5 text-[9px] font-black leading-none px-2 py-1 rounded-full shadow-lg whitespace-nowrap bg-white text-slate-900 border border-slate-200 pointer-events-none z-10 font-display transition-transform group-hover/outer:scale-90"
+          style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}
+        >
           {getAbbrev(team.name)}
         </div>
       </div>
     </div>
   );
-}
+});
