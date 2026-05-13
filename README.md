@@ -77,6 +77,7 @@ CREATE POLICY "Enable all for authenticated users only" ON public.teams FOR ALL 
 CREATE POLICY "Enable all for authenticated users only" ON public.map_settings FOR ALL TO authenticated USING (true);
 
 -- 5. Bucket Storage "maps" (Créer d'abord le bucket 'maps' dans l'interface, public)
+CREATE POLICY "Authenticated Reads" ON storage.objects FOR SELECT TO authenticated USING (bucket_id = 'maps');
 CREATE POLICY "Authenticated Uploads" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'maps');
 CREATE POLICY "Authenticated Updates" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'maps');
 CREATE POLICY "Authenticated Deletes" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'maps');
