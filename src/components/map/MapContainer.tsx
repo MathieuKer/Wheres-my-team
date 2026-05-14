@@ -26,8 +26,8 @@ export function MapContainer({
   onTeamMove, 
   onTeamDoubleClick,
   onZoneCreate,
-  onZoneUpdate: _onZoneUpdate, // Reservé pour le futur resize
-  onZoneDelete: _onZoneDelete  // Reservé pour le futur delete depuis la map
+  onZoneUpdate,
+  onZoneDelete
 }: Readonly<MapContainerProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<ReactZoomPanPinchRef>(null);
