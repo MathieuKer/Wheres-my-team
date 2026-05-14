@@ -121,8 +121,9 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
                 <Trash2 className="w-4 h-4" />
               </button>
               
-              <div 
-                className="flex-1 bg-slate-800 relative cursor-pointer overflow-hidden"
+              <button 
+                type="button"
+                className="flex-1 bg-slate-800 relative cursor-pointer overflow-hidden border-none p-0 w-full"
                 onClick={() => onSelectMap(map.id)}
               >
                 {map.image_url ? (
@@ -133,15 +134,16 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
                   </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
-              </div>
+              </button>
               
-              <div 
-                className="p-5 bg-slate-900 backdrop-blur-md relative cursor-pointer border-t border-white/5"
+              <button 
+                type="button"
+                className="p-5 bg-slate-900 backdrop-blur-md relative cursor-pointer border-t border-white/5 text-left w-full border-none"
                 onClick={() => onSelectMap(map.id)}
               >
                 <h3 className="text-white font-bold font-display text-lg truncate pr-12">{map.name}</h3>
                 <p className="text-slate-400 text-xs mt-1">Créée le {new Date(map.created_at).toLocaleDateString()}</p>
-              </div>
+              </button>
             </div>
           ))}
         </div>

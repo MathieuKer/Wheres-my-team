@@ -7,7 +7,7 @@ import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface SidebarProps {
   teams: Team[];
-  onAddTeam: (name: string, color: string) => void;
+  onAddTeam: (name: string, color: string) => Promise<void>;
   onUpdateStatus: (id: string, status: TeamStatus) => void;
   onUpdateColor: (id: string, color: string) => void;
   onDeleteTeam: (id: string) => void;

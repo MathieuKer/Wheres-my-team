@@ -22,11 +22,17 @@ function App() {
     return <LoadingFallback />;
   }
 
+  if (!session) {
+    return (
+      <Suspense fallback={<LoadingFallback />}>
+        <LoginForm />
+      </Suspense>
+    );
+  }
+
   return (
     <Suspense fallback={<LoadingFallback />}>
-      {!session ? (
-        <LoginForm />
-      ) : !selectedMapId ? (
+      {!selectedMapId ? (
         <MapList onSelectMap={setSelectedMapId} signOut={signOut} />
       ) : (
         <Dashboard mapId={selectedMapId} onBack={() => setSelectedMapId(null)} signOut={signOut} />

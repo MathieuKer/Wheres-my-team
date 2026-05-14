@@ -76,9 +76,9 @@ export function useSquadMap(mapId: string | null) {
     await teamsRepo.deleteAll(mapId);
   }, [mapId]);
 
-  const toggleIntervention = useCallback((id: string, currentStatus: string) => {
+  const toggleIntervention = useCallback((id: string, currentStatus: TeamStatus) => {
     const newStatus = currentStatus === 'intervention' ? 'dispo' : 'intervention';
-    updateTeamStatus(id, newStatus as TeamStatus);
+    updateTeamStatus(id, newStatus);
   }, [updateTeamStatus]);
 
   const requestFlush = useCallback(() => {

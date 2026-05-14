@@ -31,7 +31,6 @@ export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMove
     innerClass += " animate-bounce";
     iconClass = `drop-shadow-[0_0_15px_${team.color}cc]`;
     pinFill = team.color; 
-    pinStroke = '#ffffff'; 
   } else if (team.status === 'pause') {
     iconClass = "opacity-60 grayscale-[0.5]";
     pinStroke = '#94a3b8'; 

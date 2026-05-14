@@ -39,8 +39,8 @@ export function ConfirmDialog({
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    globalThis.addEventListener('keydown', handleKeyDown);
+    return () => globalThis.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onCancel, onConfirm]);
 
   if (!isOpen) return null;
