@@ -177,7 +177,7 @@ export function MapContainer({
                     top: `${zone.bounds.y}%`,
                     width: `${zone.bounds.width}%`,
                     height: `${zone.bounds.height}%`,
-                    backgroundColor: `${zone.color}33`,
+                    backgroundColor: `${zone.color}66`,
                     borderColor: zone.color,
                     zIndex: 5
                   }}

@@ -84,7 +84,7 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
         top: `${displayBounds.y}%`,
         width: `${displayBounds.width}%`,
         height: `${displayBounds.height}%`,
-        backgroundColor: `${zone.color}33`,
+        backgroundColor: `${zone.color}66`,
         borderColor: zone.color,
         touchAction: 'none',
         willChange: 'left, top, width, height'

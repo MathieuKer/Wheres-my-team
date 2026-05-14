@@ -15,6 +15,7 @@ interface SidebarProps {
   zones: Zone[];
   mode: 'deployment' | 'edition';
   onDeleteZone: (id: string) => void;
+  onUpdateZone: (id: string, updates: Partial<Zone>) => void;
 }
 
 export const Sidebar = memo(function Sidebar({ 
@@ -26,7 +27,8 @@ export const Sidebar = memo(function Sidebar({
   onMapUpload,
   zones,
   mode,
-  onDeleteZone
+  onDeleteZone,
+  onUpdateZone
 }: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
@@ -134,7 +136,11 @@ export const Sidebar = memo(function Sidebar({
           )}
           {zones.map(zone => (
             <div key={zone.id} className="flex items-center gap-3 glass-card p-3 rounded-xl group/zone animate-in slide-in-from-right-4 duration-300">
-               <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: zone.color }} />
+               <ColorPicker 
+                 color={zone.color} 
+                 onChange={(newColor) => onUpdateZone(zone.id, { color: newColor })} 
+                 className="w-6 h-6 shrink-0" 
+               />
                <span className="font-semibold text-sm text-slate-200 truncate flex-1 font-display">{zone.name || 'Zone sans nom'}</span>
                <button 
                  onClick={() => onDeleteZone(zone.id)} 
