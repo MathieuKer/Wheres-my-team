@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 const PRESET_COLORS = [
   '#ef4444', // Red
@@ -30,11 +31,26 @@ interface ColorPickerProps {
 export function ColorPicker({ color, onChange, className = '' }: Readonly<ColorPickerProps>) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
 
   useEffect(() => {
     if (!isOpen) return;
+
+    // Calculer la position du bouton pour placer le portal
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setPopoverPos({
+        top: rect.bottom + window.scrollY + 8,
+        left: rect.left + window.scrollX
+      });
+    }
+
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        // On vérifie aussi si on n'a pas cliqué dans le portal (qui est hors du container)
+        const portal = document.getElementById('color-picker-portal');
+        if (portal && portal.contains(e.target as Node)) return;
+        
         setIsOpen(false);
       }
     };
@@ -57,23 +73,32 @@ export function ColorPicker({ color, onChange, className = '' }: Readonly<ColorP
         />
       </button>
 
-      {/* Popover */}
-      {isOpen && (
-          <div className="absolute top-full left-0 mt-2 p-3 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-50 w-52 grid grid-cols-6 gap-2 origin-top-left animate-in fade-in zoom-in duration-200 backdrop-blur-xl">
-            {PRESET_COLORS.map(c => (
-              <button
-                key={c}
-                type="button"
-                className={`w-6 h-6 rounded-full transition-all hover:scale-125 focus:outline-none focus:ring-2 focus:ring-white/50 ${color === c ? 'ring-2 ring-white scale-110 shadow-lg' : ''}`}
-                style={{ backgroundColor: c, boxShadow: color === c ? `0 0 10px ${c}` : undefined }}
-                onClick={() => {
-                  onChange(c);
-                  setIsOpen(false);
-                }}
-              />
-            ))}
-          </div>
+      {/* Popover via Portal */}
+      {isOpen && createPortal(
+        <div 
+          id="color-picker-portal"
+          className="fixed p-3 bg-slate-900 border border-white/10 rounded-2xl shadow-2xl z-[9999] w-52 grid grid-cols-6 gap-2 origin-top-left animate-in fade-in zoom-in duration-200 backdrop-blur-xl"
+          style={{ 
+            top: `${popoverPos.top}px`, 
+            left: `${popoverPos.left}px` 
+          }}
+        >
+          {PRESET_COLORS.map(c => (
+            <button
+              key={c}
+              type="button"
+              className={`w-6 h-6 rounded-full transition-all hover:scale-125 focus:outline-none focus:ring-2 focus:ring-white/50 ${color === c ? 'ring-2 ring-white scale-110 shadow-lg' : ''}`}
+              style={{ backgroundColor: c, boxShadow: color === c ? `0 0 10px ${c}` : undefined }}
+              onClick={() => {
+                onChange(c);
+                setIsOpen(false);
+              }}
+            />
+          ))}
+        </div>,
+        document.body
       )}
     </div>
   );
 }
+
