@@ -121,8 +121,8 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
     >
       {/* Label de la zone */}
       <div 
-        className="absolute top-0 left-0 bg-black/70 backdrop-blur px-2 py-1 text-xs text-white font-bold rounded-br uppercase pointer-events-none"
-        style={{ color: zone.color }}
+        className="absolute top-0 left-0 backdrop-blur px-2 py-1 text-xs text-white font-bold rounded-br uppercase pointer-events-none shadow-lg"
+        style={{ backgroundColor: `${zone.color}cc` }}
       >
         {zone.name}
       </div>

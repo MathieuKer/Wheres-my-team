@@ -185,8 +185,8 @@ export function MapContainer({
                   }}
                 >
                   <div 
-                    className="absolute top-0 left-0 bg-black/70 backdrop-blur px-2 py-1 text-xs text-white font-bold rounded-br uppercase"
-                    style={{ color: zone.color }}
+                    className="absolute top-0 left-0 backdrop-blur px-2 py-1 text-xs text-white font-bold rounded-br uppercase shadow-lg"
+                    style={{ backgroundColor: `${zone.color}cc` }}
                   >
                     {zone.name}
                   </div>
