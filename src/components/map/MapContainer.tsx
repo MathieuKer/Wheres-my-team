@@ -27,7 +27,7 @@ export function MapContainer({
   onTeamDoubleClick,
   onZoneCreate,
   onZoneUpdate,
-  onZoneDelete
+  onZoneDelete: _onZoneDelete
 }: Readonly<MapContainerProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<ReactZoomPanPinchRef>(null);
@@ -80,6 +80,7 @@ export function MapContainer({
       onZoneCreate({
         name: `Zone ${zones.length + 1}`,
         color: '#3b82f6',
+        rotation: 0,
         bounds: {
           x: Math.min(drawStart.x, drawCurrent.x),
           y: Math.min(drawStart.y, drawCurrent.y),
@@ -179,6 +180,7 @@ export function MapContainer({
                     height: `${zone.bounds.height}%`,
                     backgroundColor: `${zone.color}66`,
                     borderColor: zone.color,
+                    transform: `rotate(${zone.rotation}deg)`,
                     zIndex: 5
                   }}
                 >

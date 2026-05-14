@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { Zone } from '../../types';
+import { RotateCw } from 'lucide-react';
 
 interface ZoneElementProps {
   zone: Zone;
@@ -9,10 +10,28 @@ interface ZoneElementProps {
 export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
+  
+  // États locaux pour le rendu fluide
   const [localBounds, setLocalBounds] = useState(zone.bounds);
+  const [localRotation, setLocalRotation] = useState(zone.rotation || 0);
+  
+  // Refs pour éviter les closures périmées lors du drag
+  const boundsRef = useRef(zone.bounds);
+  const rotationRef = useRef(zone.rotation || 0);
   const elementRef = useRef<HTMLDivElement>(null);
 
-  const startDrag = (e: React.PointerEvent, type: 'move' | 'resize') => {
+  // Synchronisation quand les props changent (ex: mise à jour par un autre utilisateur ou reset)
+  useEffect(() => {
+    if (!isDragging && !isResizing && !isRotating) {
+      setLocalBounds(zone.bounds);
+      setLocalRotation(zone.rotation || 0);
+      boundsRef.current = zone.bounds;
+      rotationRef.current = zone.rotation || 0;
+    }
+  }, [zone.bounds, zone.rotation, isDragging, isResizing, isRotating]);
+
+  const startDrag = (e: React.PointerEvent, type: 'move' | 'resize' | 'rotate') => {
     e.stopPropagation();
     
     const container = document.getElementById('map-bounds-container');
@@ -24,49 +43,56 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
     const rect = container.getBoundingClientRect();
 
     if (type === 'move') setIsDragging(true);
-    else setIsResizing(true);
+    else if (type === 'resize') setIsResizing(true);
+    else setIsRotating(true);
 
     const handlePointerMove = (moveEvent: PointerEvent) => {
       const deltaX = ((moveEvent.clientX - startX) / rect.width) * 100;
       const deltaY = ((moveEvent.clientY - startY) / rect.height) * 100;
 
       if (type === 'move') {
-        setLocalBounds({
+        const nextBounds = {
           ...initialBounds,
           x: initialBounds.x + deltaX,
           y: initialBounds.y + deltaY
-        });
-      } else {
-        setLocalBounds({
+        };
+        setLocalBounds(nextBounds);
+        boundsRef.current = nextBounds;
+      } else if (type === 'resize') {
+        const nextBounds = {
           ...initialBounds,
           width: Math.max(2, initialBounds.width + deltaX),
           height: Math.max(2, initialBounds.height + deltaY)
-        });
+        };
+        setLocalBounds(nextBounds);
+        boundsRef.current = nextBounds;
+      } else if (type === 'rotate') {
+        const zoneRect = elementRef.current?.getBoundingClientRect();
+        if (zoneRect) {
+          const centerX = zoneRect.left + zoneRect.width / 2;
+          const centerY = zoneRect.top + zoneRect.height / 2;
+          
+          const angle = Math.atan2(moveEvent.clientY - centerY, moveEvent.clientX - centerX);
+          const degree = (angle * 180) / Math.PI + 90;
+          setLocalRotation(degree);
+          rotationRef.current = degree;
+        }
       }
     };
 
-    const handlePointerUp = (upEvent: PointerEvent) => {
+    const handlePointerUp = () => {
       globalThis.removeEventListener('pointermove', handlePointerMove);
       globalThis.removeEventListener('pointerup', handlePointerUp);
       
       setIsDragging(false);
       setIsResizing(false);
+      setIsRotating(false);
 
-      // Calculer les coordonnées finales
-      const deltaX = ((upEvent.clientX - startX) / rect.width) * 100;
-      const deltaY = ((upEvent.clientY - startY) / rect.height) * 100;
-
-      const finalBounds = type === 'move' ? {
-        ...initialBounds,
-        x: initialBounds.x + deltaX,
-        y: initialBounds.y + deltaY
-      } : {
-        ...initialBounds,
-        width: Math.max(2, initialBounds.width + deltaX),
-        height: Math.max(2, initialBounds.height + deltaY)
-      };
-
-      onUpdate(zone.id, { bounds: finalBounds });
+      if (type === 'rotate') {
+        onUpdate(zone.id, { rotation: rotationRef.current });
+      } else {
+        onUpdate(zone.id, { bounds: boundsRef.current });
+      }
     };
 
     globalThis.addEventListener('pointermove', handlePointerMove);
@@ -74,6 +100,7 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
   };
 
   const displayBounds = (isDragging || isResizing) ? localBounds : zone.bounds;
+  const displayRotation = isRotating ? localRotation : (zone.rotation || 0);
 
   return (
     <div 
@@ -86,11 +113,13 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
         height: `${displayBounds.height}%`,
         backgroundColor: `${zone.color}66`,
         borderColor: zone.color,
+        transform: `rotate(${displayRotation}deg)`,
         touchAction: 'none',
-        willChange: 'left, top, width, height'
+        willChange: 'left, top, width, height, transform'
       }}
       onPointerDown={(e) => startDrag(e, 'move')}
     >
+      {/* Label de la zone */}
       <div 
         className="absolute top-0 left-0 bg-black/40 backdrop-blur px-1.5 py-0.5 text-[10px] text-white font-bold rounded-br uppercase pointer-events-none"
         style={{ color: zone.color }}
@@ -98,7 +127,16 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
         {zone.name}
       </div>
 
-      {/* Resize Handle */}
+      {/* Rotation Handle - En haut au centre */}
+      <div 
+        className="absolute -top-10 left-1/2 -translate-x-1/2 w-8 h-8 bg-slate-800 border border-white/20 rounded-full flex items-center justify-center cursor-alias opacity-0 group-hover/zone:opacity-100 transition-opacity z-20 shadow-xl text-amber-400 hover:text-amber-300 hover:bg-slate-700 active:scale-90"
+        onPointerDown={(e) => startDrag(e, 'rotate')}
+      >
+        <RotateCw className="w-4 h-4" />
+        <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-2 bg-white/20" />
+      </div>
+
+      {/* Resize Handle - En bas à droite */}
       <div 
         className="absolute bottom-0 right-0 w-6 h-6 cursor-nwse-resize flex items-center justify-center opacity-0 group-hover/zone:opacity-100 transition-opacity z-20"
         onPointerDown={(e) => startDrag(e, 'resize')}
