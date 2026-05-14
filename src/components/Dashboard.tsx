@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Users, LogOut, Menu, X, ArrowLeft } from 'lucide-react';
+import { LogOut, Menu, X, ArrowLeft } from 'lucide-react';
 import { useSquadMap } from '../hooks/useSquadMap';
 import { Sidebar } from './sidebar/Sidebar';
 import { MapContainer } from './map/MapContainer';
