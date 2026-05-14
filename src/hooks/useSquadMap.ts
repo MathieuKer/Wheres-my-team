@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import useSWR, { mutate } from 'swr';
 import { teamsRepo } from '../lib/repositories/teams';
 import { mapRepo } from '../lib/repositories/map';
-import type { TeamStatus } from '../types';
+import { zoneRepo } from '../lib/repositories/zones';
+import type { TeamStatus, Zone } from '../types';
 
 /**
  * Orchestrateur de domaine "SquadMap".
@@ -11,8 +12,10 @@ import type { TeamStatus } from '../types';
 export function useSquadMap(mapId: string | null) {
   const { data: teams = [], isLoading: loadingTeams } = useSWR(mapId ? ['teams', mapId] : null, () => teamsRepo.getAll(mapId!));
   const { data: mapSettings, isLoading: loadingMap } = useSWR(mapId ? ['map', mapId] : null, () => mapRepo.getById(mapId!));
+  const { data: zones = [], isLoading: loadingZones } = useSWR(mapId ? ['zones', mapId] : null, () => zoneRepo.getAll(mapId!));
 
   const [isAdding, setIsAdding] = useState(false);
+  const [mode, setMode] = useState<'deployment' | 'edition'>('deployment');
 
   useEffect(() => {
     if (!mapId) return;
@@ -29,9 +32,14 @@ export function useSquadMap(mapId: string | null) {
       }
     });
     
+    const unsubscribeZones = zoneRepo.subscribe(mapId, () => {
+      mutate(['zones', mapId]);
+    });
+    
     return () => {
       unsubscribeTeams();
       unsubscribeMap();
+      unsubscribeZones();
     };
   }, [mapId]);
 
@@ -93,6 +101,33 @@ export function useSquadMap(mapId: string | null) {
     await mapRepo.update(mapId, { image_url: url });
   }, [mapId, mapSettings]);
 
+  // --- ACTIONS ZONES ---
+  const addZone = useCallback(async (zone: Omit<Zone, 'id' | 'map_id' | 'created_at'>) => {
+    if (!mapId) return;
+    try {
+      const newZone = await zoneRepo.create(mapId, zone);
+      mutate(['zones', mapId], [...zones, newZone], false);
+    } catch (err) {
+      console.error("Erreur création zone:", err);
+    }
+  }, [mapId, zones]);
+
+  const updateZone = useCallback(async (id: string, updates: Partial<Zone>) => {
+    if (!mapId) return;
+    mutate(['zones', mapId], zones.map(z => z.id === id ? { ...z, ...updates } : z), false);
+    await zoneRepo.update(id, updates);
+  }, [mapId, zones]);
+
+  const deleteZone = useCallback(async (id: string) => {
+    if (!mapId) return;
+    mutate(['zones', mapId], zones.filter(z => z.id !== id), false);
+    await zoneRepo.delete(id);
+  }, [mapId, zones]);
+
+  const toggleMode = useCallback(() => {
+    setMode(prev => prev === 'deployment' ? 'edition' : 'deployment');
+  }, []);
+
   const memoizedActions = useMemo(() => ({
     addTeam,
     updateTeamPosition,
@@ -101,7 +136,11 @@ export function useSquadMap(mapId: string | null) {
     deleteTeam,
     updateMapUrl,
     toggleIntervention,
-    requestFlush
+    requestFlush,
+    addZone,
+    updateZone,
+    deleteZone,
+    toggleMode
   }), [
     addTeam,
     updateTeamPosition,
@@ -110,14 +149,20 @@ export function useSquadMap(mapId: string | null) {
     deleteTeam,
     updateMapUrl,
     toggleIntervention,
-    requestFlush
+    requestFlush,
+    addZone,
+    updateZone,
+    deleteZone,
+    toggleMode
   ]);
 
   return {
     state: {
       teams,
+      zones,
+      mode,
       mapUrl: mapSettings?.image_url ?? null,
-      loading: loadingTeams || loadingMap
+      loading: loadingTeams || loadingMap || loadingZones
     },
     actions: memoizedActions
   };

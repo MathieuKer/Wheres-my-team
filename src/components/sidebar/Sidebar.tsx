@@ -1,5 +1,5 @@
 import { useState, useMemo, memo } from 'react';
-import type { Team, TeamStatus } from '../../types';
+import type { Team, TeamStatus, Zone } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { Trash2, AlertTriangle, Coffee, Play, UploadCloud } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
@@ -12,6 +12,9 @@ interface SidebarProps {
   onUpdateColor: (id: string, color: string) => void;
   onDeleteTeam: (id: string) => void;
   onMapUpload: (url: string) => void;
+  zones: Zone[];
+  mode: 'deployment' | 'edition';
+  onDeleteZone: (id: string) => void;
 }
 
 export const Sidebar = memo(function Sidebar({ 
@@ -20,7 +23,10 @@ export const Sidebar = memo(function Sidebar({
   onUpdateStatus, 
   onUpdateColor, 
   onDeleteTeam, 
-  onMapUpload 
+  onMapUpload,
+  zones,
+  mode,
+  onDeleteZone
 }: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
@@ -89,32 +95,62 @@ export const Sidebar = memo(function Sidebar({
         </label>
       </div>
 
-      {/* Ajout Équipe */}
-      <form onSubmit={handleAdd} className="flex flex-col gap-3 glass-card p-4 rounded-2xl relative focus-within:z-[60] hover:z-[60] transition-all">
-        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 font-display">Nouvelle Équipe</div>
-        <input 
-          type="text" 
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="Ex: Unité Alpha…" 
-          className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-        />
-        <div className="flex gap-2 relative focus-within:z-[60]">
-          <div className="h-10 w-[20%] bg-white/5 border border-white/10 rounded-xl flex items-center justify-center shrink-0">
-            <ColorPicker color={newColor} onChange={setNewColor} />
+      {/* Ajout Équipe - Uniquement en mode déploiement */}
+      {mode === 'deployment' && (
+        <form onSubmit={handleAdd} className="flex flex-col gap-3 glass-card p-4 rounded-2xl relative focus-within:z-[60] hover:z-[60] transition-all">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 font-display">Nouvelle Équipe</div>
+          <input 
+            type="text" 
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Ex: Unité Alpha…" 
+            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+          />
+          <div className="flex gap-2 relative focus-within:z-[60]">
+            <div className="h-10 w-[20%] bg-white/5 border border-white/10 rounded-xl flex items-center justify-center shrink-0">
+              <ColorPicker color={newColor} onChange={setNewColor} />
+            </div>
+            <button 
+              type="submit" 
+              disabled={isAdding}
+              className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all rounded-xl text-sm text-white font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isAdding ? 'Ajout…' : "Ajouter l'Unité"}
+            </button>
           </div>
-          <button 
-            type="submit" 
-            disabled={isAdding}
-            className="flex-1 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all rounded-xl text-sm text-white font-bold shadow-lg shadow-blue-500/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isAdding ? 'Ajout…' : "Ajouter l'Unité"}
-          </button>
-        </div>
-      </form>
+        </form>
+      )}
 
-      {/* Liste Équipes */}
-      <div className="flex flex-col gap-3">
+      {/* Mode Édition - Liste des Zones */}
+      {mode === 'edition' && (
+        <div className="flex flex-col gap-3">
+          <div className="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1 flex justify-between items-center font-display">
+            <span>Zones du plan ({zones.length})</span>
+          </div>
+          {zones.length === 0 && (
+            <div className="p-8 text-center glass-card rounded-2xl border-dashed border-2 border-white/5">
+              <p className="text-slate-500 text-xs italic">Dessinez sur la carte pour créer une zone</p>
+            </div>
+          )}
+          {zones.map(zone => (
+            <div key={zone.id} className="flex items-center gap-3 glass-card p-3 rounded-xl group/zone animate-in slide-in-from-right-4 duration-300">
+               <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: zone.color }} />
+               <span className="font-semibold text-sm text-slate-200 truncate flex-1 font-display">{zone.name || 'Zone sans nom'}</span>
+               <button 
+                 onClick={() => onDeleteZone(zone.id)} 
+                 className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100" 
+                 aria-label="Supprimer la zone"
+               >
+                 <Trash2 className="w-4 h-4" />
+               </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Liste Équipes - Uniquement en mode déploiement (ou grisé ?) */}
+      {mode === 'deployment' && (
+        <div className="flex flex-col gap-3">
         <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex justify-between items-center font-display">
           <span>Unités sur le terrain ({teams.length})</span>
         </div>
@@ -161,6 +197,7 @@ export const Sidebar = memo(function Sidebar({
            </div>
         ))}
       </div>
+      )}
 
       <ConfirmDialog 
         isOpen={!!teamToDelete}

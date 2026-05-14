@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogOut, Menu, X, ArrowLeft } from 'lucide-react';
+import { LogOut, Menu, X, ArrowLeft, Layout, Settings } from 'lucide-react';
 import { useSquadMap } from '../hooks/useSquadMap';
 import { Sidebar } from './sidebar/Sidebar';
 import { MapContainer } from './map/MapContainer';
@@ -53,8 +53,13 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
         <MapContainer 
           mapUrl={state.mapUrl}
           teams={state.teams}
+          zones={state.zones}
+          mode={state.mode}
           onTeamMove={actions.updateTeamPosition}
           onTeamDoubleClick={actions.toggleIntervention}
+          onZoneCreate={actions.addZone}
+          onZoneUpdate={actions.updateZone}
+          onZoneDelete={actions.deleteZone}
         />
       </div>
 
@@ -72,6 +77,24 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
             <span className="premium-gradient-text">Répartition</span>
             <span className="text-xs bg-white/5 px-2 py-0.5 rounded-full text-slate-500 border border-white/5">{state.teams.length}</span>
           </div>
+
+          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+            <button
+              onClick={() => state.mode !== 'deployment' && actions.toggleMode()}
+              className={`p-2 rounded-lg transition-all ${state.mode === 'deployment' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Mode Déploiement"
+            >
+              <Layout className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => state.mode !== 'edition' && actions.toggleMode()}
+              className={`p-2 rounded-lg transition-all ${state.mode === 'edition' ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/20' : 'text-slate-500 hover:text-slate-300'}`}
+              title="Mode Édition de Plan"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+
           <button 
             onClick={signOut} 
             className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all" 
@@ -84,11 +107,14 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
         
         <Sidebar 
           teams={state.teams}
+          zones={state.zones}
+          mode={state.mode}
           onAddTeam={actions.addTeam}
           onUpdateColor={actions.updateTeamColor}
           onUpdateStatus={actions.updateTeamStatus}
           onDeleteTeam={actions.deleteTeam}
           onMapUpload={actions.updateMapUrl}
+          onDeleteZone={actions.deleteZone}
         />
 
         <div className="p-6 border-t border-white/5 bg-black/20">
