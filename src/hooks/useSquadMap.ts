@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import useSWR, { mutate } from 'swr';
 import { teamsRepo } from '../lib/repositories/teams';
 import { mapRepo } from '../lib/repositories/map';
@@ -35,7 +35,7 @@ export function useSquadMap(mapId: string | null) {
     };
   }, [mapId]);
 
-  const addTeam = async (name: string, color: string) => {
+  const addTeam = useCallback(async (name: string, color: string) => {
     if (isAdding || !mapId) return;
     setIsAdding(true);
     try {
@@ -44,54 +44,74 @@ export function useSquadMap(mapId: string | null) {
     } finally {
       setIsAdding(false);
     }
-  };
+  }, [mapId, isAdding]);
 
-  const updateTeamPosition = async (id: string, x: number, y: number) => {
+  const updateTeamPosition = useCallback(async (id: string, x: number, y: number) => {
     if (!mapId) return;
     mutate(['teams', mapId], teams.map(t => t.id === id ? { ...t, pos_x: x, pos_y: y } : t), false);
     await teamsRepo.update(id, { pos_x: x, pos_y: y });
-  };
+  }, [mapId, teams]);
 
-  const updateTeamColor = async (id: string, color: string) => {
+  const updateTeamColor = useCallback(async (id: string, color: string) => {
     if (!mapId) return;
     mutate(['teams', mapId], teams.map(t => t.id === id ? { ...t, color } : t), false);
     await teamsRepo.update(id, { color });
-  };
+  }, [mapId, teams]);
 
-  const updateTeamStatus = async (id: string, status: TeamStatus) => {
+  const updateTeamStatus = useCallback(async (id: string, status: TeamStatus) => {
     if (!mapId) return;
     mutate(['teams', mapId], teams.map(t => t.id === id ? { ...t, status } : t), false);
     await teamsRepo.update(id, { status });
-  };
+  }, [mapId, teams]);
 
-  const deleteTeam = async (id: string) => {
+  const deleteTeam = useCallback(async (id: string) => {
     if (!mapId) return;
     mutate(['teams', mapId], teams.filter(t => t.id !== id), false);
     await teamsRepo.delete(id);
-  };
+  }, [mapId, teams]);
 
-  const flushAll = async () => {
+  const flushAll = useCallback(async () => {
     if (!mapId) return;
     mutate(['teams', mapId], [], false);
     await teamsRepo.deleteAll(mapId);
-  };
+  }, [mapId]);
 
-  const toggleIntervention = (id: string, currentStatus: string) => {
+  const toggleIntervention = useCallback((id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'intervention' ? 'dispo' : 'intervention';
     updateTeamStatus(id, newStatus as TeamStatus);
-  };
+  }, [updateTeamStatus]);
 
-  const requestFlush = () => {
+  const requestFlush = useCallback(() => {
     if (globalThis.confirm("Êtes-vous sûr de vouloir supprimer toutes les équipes ? Cette action est irréversible.")) {
       flushAll();
     }
-  };
+  }, [flushAll]);
 
-  const updateMapUrl = async (url: string | null) => {
+  const updateMapUrl = useCallback(async (url: string | null) => {
     if (!mapId) return;
     mutate(['map', mapId], { ...mapSettings, image_url: url }, false);
     await mapRepo.update(mapId, { image_url: url });
-  };
+  }, [mapId, mapSettings]);
+
+  const memoizedActions = useMemo(() => ({
+    addTeam,
+    updateTeamPosition,
+    updateTeamColor,
+    updateTeamStatus,
+    deleteTeam,
+    updateMapUrl,
+    toggleIntervention,
+    requestFlush
+  }), [
+    addTeam,
+    updateTeamPosition,
+    updateTeamColor,
+    updateTeamStatus,
+    deleteTeam,
+    updateMapUrl,
+    toggleIntervention,
+    requestFlush
+  ]);
 
   return {
     state: {
@@ -99,15 +119,6 @@ export function useSquadMap(mapId: string | null) {
       mapUrl: mapSettings?.image_url ?? null,
       loading: loadingTeams || loadingMap
     },
-    actions: {
-      addTeam,
-      updateTeamPosition,
-      updateTeamColor,
-      updateTeamStatus,
-      deleteTeam,
-      updateMapUrl,
-      toggleIntervention,
-      requestFlush
-    }
+    actions: memoizedActions
   };
 }

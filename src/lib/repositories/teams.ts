@@ -26,6 +26,11 @@ export const supabaseTeamRepository: TeamRepository = {
   },
 
   async create(mapId, name, color) {
+    console.log("TeamRepository.create called with:", { mapId, name, color });
+    if (!mapId) {
+      console.error("CRITICAL: mapId is missing in TeamRepository.create");
+      throw new Error("mapId is required to create a team");
+    }
     const { error } = await supabase.from('teams').insert([{ map_id: mapId, name, color }]);
     if (error) throw error;
   },
