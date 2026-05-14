@@ -141,7 +141,13 @@ export const Sidebar = memo(function Sidebar({
                  onChange={(newColor) => onUpdateZone(zone.id, { color: newColor })} 
                  className="w-6 h-6 shrink-0" 
                />
-               <span className="font-semibold text-sm text-slate-200 truncate flex-1 font-display">{zone.name || 'Zone sans nom'}</span>
+               <input
+                 type="text"
+                 value={zone.name || ''}
+                 onChange={(e) => onUpdateZone(zone.id, { name: e.target.value })}
+                 placeholder="Nom de la zone..."
+                 className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-200 font-display p-0"
+               />
                <button 
                  onClick={() => onDeleteZone(zone.id)} 
                  className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100" 
