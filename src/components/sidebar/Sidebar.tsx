@@ -40,6 +40,10 @@ export const Sidebar = memo(function Sidebar({
     return [...teams].sort((a, b) => a.name.localeCompare(b.name));
   }, [teams]);
 
+  const sortedZones = useMemo(() => {
+    return [...zones].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }, [zones]);
+
   const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanName = newName.trim();
@@ -134,7 +138,7 @@ export const Sidebar = memo(function Sidebar({
               <p className="text-slate-500 text-xs italic">Dessinez sur la carte pour créer une zone</p>
             </div>
           )}
-          {zones.map(zone => (
+          {sortedZones.map(zone => (
             <div key={zone.id} className="flex items-center glass-card p-3 rounded-xl group/zone animate-in slide-in-from-right-4 duration-300">
                <div className="shrink-0 mr-3">
                  <ColorPicker 
