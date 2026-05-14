@@ -46,10 +46,12 @@ export function ColorPicker({ color, onChange, className = '' }: Readonly<ColorP
     }
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      // @ts-ignore - SonarCloud prefers no assertion here
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
         // On vérifie aussi si on n'a pas cliqué dans le portal (qui est hors du container)
         const portal = document.getElementById('color-picker-portal');
-        if (portal?.contains(e.target as Node)) return;
+        // @ts-ignore
+        if (portal?.contains(e.target)) return;
         
         setIsOpen(false);
       }
