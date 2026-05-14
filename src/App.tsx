@@ -32,10 +32,10 @@ function App() {
 
   return (
     <Suspense fallback={<LoadingFallback />}>
-      {!selectedMapId ? (
-        <MapList onSelectMap={setSelectedMapId} signOut={signOut} />
-      ) : (
+      {selectedMapId ? (
         <Dashboard mapId={selectedMapId} onBack={() => setSelectedMapId(null)} signOut={signOut} />
+      ) : (
+        <MapList onSelectMap={setSelectedMapId} signOut={signOut} />
       )}
     </Suspense>
   );
