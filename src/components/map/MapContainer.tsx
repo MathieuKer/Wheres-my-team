@@ -172,20 +172,20 @@ export function MapContainer({
               ) : (
                 <div 
                   key={zone.id}
-                  className="absolute border-2 border-solid opacity-60 pointer-events-none zone-element"
+                  className="absolute border-[3px] border-dashed pointer-events-none zone-element"
                   style={{
                     left: `${zone.bounds.x}%`,
                     top: `${zone.bounds.y}%`,
                     width: `${zone.bounds.width}%`,
                     height: `${zone.bounds.height}%`,
                     backgroundColor: `${zone.color}66`,
-                    borderColor: zone.color,
+                    borderColor: `${zone.color}99`,
                     transform: `rotate(${zone.rotation}deg)`,
                     zIndex: 5
                   }}
                 >
                   <div 
-                    className="absolute top-0 left-0 bg-black/40 backdrop-blur px-1.5 py-0.5 text-[10px] text-white font-bold rounded-br uppercase"
+                    className="absolute top-0 left-0 bg-black/70 backdrop-blur px-2 py-1 text-xs text-white font-bold rounded-br uppercase"
                     style={{ color: zone.color }}
                   >
                     {zone.name}

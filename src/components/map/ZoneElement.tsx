@@ -105,14 +105,14 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
   return (
     <div 
       ref={elementRef}
-      className={`absolute border-2 border-dashed animate-in fade-in duration-500 cursor-move z-10 zone-element nodrag group/zone transition-none select-none`}
+      className={`absolute border-[3px] border-dashed animate-in fade-in duration-500 cursor-move z-10 zone-element nodrag group/zone transition-none select-none`}
       style={{
         left: `${displayBounds.x}%`,
         top: `${displayBounds.y}%`,
         width: `${displayBounds.width}%`,
         height: `${displayBounds.height}%`,
         backgroundColor: `${zone.color}66`,
-        borderColor: zone.color,
+        borderColor: `${zone.color}99`,
         transform: `rotate(${displayRotation}deg)`,
         touchAction: 'none',
         willChange: 'left, top, width, height, transform'
@@ -121,7 +121,7 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
     >
       {/* Label de la zone */}
       <div 
-        className="absolute top-0 left-0 bg-black/40 backdrop-blur px-1.5 py-0.5 text-[10px] text-white font-bold rounded-br uppercase pointer-events-none"
+        className="absolute top-0 left-0 bg-black/70 backdrop-blur px-2 py-1 text-xs text-white font-bold rounded-br uppercase pointer-events-none"
         style={{ color: zone.color }}
       >
         {zone.name}
