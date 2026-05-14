@@ -35,6 +35,7 @@ export const Sidebar = memo(function Sidebar({
   const [uploading, setUploading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
+  const [zoneToDelete, setZoneToDelete] = useState<Zone | null>(null);
 
   const sortedTeams = useMemo(() => {
     return [...teams].sort((a, b) => a.name.localeCompare(b.name));
@@ -160,7 +161,7 @@ export const Sidebar = memo(function Sidebar({
 
                <div className="shrink-0 ml-4 mr-2">
                  <button 
-                   onClick={() => onDeleteZone(zone.id)} 
+                   onClick={() => setZoneToDelete(zone)} 
                    className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100" 
                    aria-label="Supprimer la zone"
                  >
@@ -235,7 +236,21 @@ export const Sidebar = memo(function Sidebar({
           setTeamToDelete(null);
         }}
         onCancel={() => setTeamToDelete(null)}
-      />
+       />
+
+       <ConfirmDialog 
+         isOpen={!!zoneToDelete}
+         title="Supprimer la zone"
+         message={
+           <p>Êtes-vous sûr de vouloir supprimer la zone <strong className="text-white">{zoneToDelete?.name}</strong> ?<br/><span className="text-red-400 text-xs">Cette action supprimera également le tracé sur la carte.</span></p>
+         }
+         confirmText="Supprimer"
+         onConfirm={() => {
+           if (zoneToDelete) onDeleteZone(zoneToDelete.id);
+           setZoneToDelete(null);
+         }}
+         onCancel={() => setZoneToDelete(null)}
+       />
     </div>
   );
 });
