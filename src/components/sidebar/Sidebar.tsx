@@ -135,26 +135,34 @@ export const Sidebar = memo(function Sidebar({
             </div>
           )}
           {zones.map(zone => (
-            <div key={zone.id} className="flex items-center gap-3 glass-card p-3 pr-4 rounded-xl group/zone animate-in slide-in-from-right-4 duration-300">
-               <ColorPicker 
-                 color={zone.color} 
-                 onChange={(newColor) => onUpdateZone(zone.id, { color: newColor })} 
-                 className="w-6 h-6 shrink-0" 
-               />
-               <input
-                 type="text"
-                 value={zone.name || ''}
-                 onChange={(e) => onUpdateZone(zone.id, { name: e.target.value })}
-                 placeholder="Nom de la zone..."
-                 className="flex-1 bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-200 font-display p-0"
-               />
-               <button 
-                 onClick={() => onDeleteZone(zone.id)} 
-                 className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100 shrink-0 mr-2" 
-                 aria-label="Supprimer la zone"
-               >
-                 <Trash2 className="w-4 h-4" />
-               </button>
+            <div key={zone.id} className="flex items-center glass-card p-3 rounded-xl group/zone animate-in slide-in-from-right-4 duration-300">
+               <div className="shrink-0 mr-3">
+                 <ColorPicker 
+                   color={zone.color} 
+                   onChange={(newColor) => onUpdateZone(zone.id, { color: newColor })} 
+                   className="w-6 h-6" 
+                 />
+               </div>
+               
+               <div className="flex-1 min-w-0">
+                 <input
+                   type="text"
+                   value={zone.name || ''}
+                   onChange={(e) => onUpdateZone(zone.id, { name: e.target.value })}
+                   placeholder="Nom de la zone..."
+                   className="w-full bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-200 font-display p-0"
+                 />
+               </div>
+
+               <div className="shrink-0 ml-4 mr-2">
+                 <button 
+                   onClick={() => onDeleteZone(zone.id)} 
+                   className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100" 
+                   aria-label="Supprimer la zone"
+                 >
+                   <Trash2 className="w-4 h-4" />
+                 </button>
+               </div>
             </div>
           ))}
         </div>
