@@ -135,7 +135,7 @@ export const Sidebar = memo(function Sidebar({
             </div>
           )}
           {zones.map(zone => (
-            <div key={zone.id} className="flex items-center gap-3 glass-card p-3 rounded-xl group/zone animate-in slide-in-from-right-4 duration-300">
+            <div key={zone.id} className="flex items-center gap-3 glass-card p-3 pr-4 rounded-xl group/zone animate-in slide-in-from-right-4 duration-300">
                <ColorPicker 
                  color={zone.color} 
                  onChange={(newColor) => onUpdateZone(zone.id, { color: newColor })} 
@@ -150,7 +150,7 @@ export const Sidebar = memo(function Sidebar({
                />
                <button 
                  onClick={() => onDeleteZone(zone.id)} 
-                 className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100 shrink-0 mr-1" 
+                 className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100 shrink-0" 
                  aria-label="Supprimer la zone"
                >
                  <Trash2 className="w-4 h-4" />
