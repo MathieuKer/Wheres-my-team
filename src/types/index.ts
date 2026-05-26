@@ -33,5 +33,7 @@ export interface Zone {
   };
   rotation: number;
   type?: string;
+  font_size?: number;
+  opacity?: number;
   created_at: string;
 }

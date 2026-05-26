@@ -22,9 +22,12 @@ export const ZoneContent = memo(function ZoneContent({ zone }: Readonly<ZoneCont
     return (
       <div 
         className="w-full h-full flex items-center justify-center p-2 text-center select-none overflow-hidden"
-        style={{ color }}
+        style={{ 
+          color,
+          fontSize: `${zone.font_size ?? 14}px`
+        }}
       >
-        <span className="font-bold text-xs sm:text-sm leading-tight break-words uppercase tracking-wide">
+        <span className="font-bold leading-tight break-words uppercase tracking-wide">
           {zone.name || 'Saisir le texte...'}
         </span>
       </div>

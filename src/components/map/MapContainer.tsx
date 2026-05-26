@@ -210,6 +210,7 @@ export function MapContainer({
                     borderWidth,
                     borderStyle,
                     borderRadius,
+                    opacity: zone.opacity !== undefined ? zone.opacity : 1.0,
                     transform: `rotate(${zone.rotation}deg)`,
                     zIndex: 5
                   }}

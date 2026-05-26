@@ -140,18 +140,26 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
         top: `${displayBounds.y}%`,
         width: `${displayBounds.width}%`,
         height: `${displayBounds.height}%`,
-        backgroundColor: bg,
-        borderColor: border,
-        borderWidth,
-        borderStyle,
-        borderRadius,
         transform: `rotate(${displayRotation}deg)`,
         touchAction: 'none',
         willChange: 'left, top, width, height, transform'
       }}
       onPointerDown={(e) => startDrag(e, 'move')}
     >
-      <ZoneContent zone={zone} />
+      {/* Content & Background Wrapper with Custom Opacity */}
+      <div 
+        className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none"
+        style={{
+          backgroundColor: bg,
+          borderColor: border,
+          borderWidth,
+          borderStyle,
+          borderRadius,
+          opacity: zone.opacity !== undefined ? zone.opacity : 1.0,
+        }}
+      >
+        <ZoneContent zone={zone} />
+      </div>
 
       {/* Rotation Handle - En haut au centre */}
       <div 

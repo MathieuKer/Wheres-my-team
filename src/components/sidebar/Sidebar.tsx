@@ -1,7 +1,7 @@
 import { useState, useMemo, memo } from 'react';
 import type { Team, TeamStatus, Zone } from '../../types';
 import { supabase } from '../../lib/supabase';
-import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils } from 'lucide-react';
+import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
@@ -189,6 +189,7 @@ export const Sidebar = memo(function Sidebar({
   const [isAdding, setIsAdding] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [zoneToDelete, setZoneToDelete] = useState<Zone | null>(null);
+  const [activeZoneConfigId, setActiveZoneConfigId] = useState<string | null>(null);
 
   const handleAddSpecialElement = (type: string, defaultName: string) => {
     const isText = type === 'text';
@@ -401,43 +402,104 @@ export const Sidebar = memo(function Sidebar({
                 <p className="text-slate-500 text-xs italic">Dessinez sur la carte ou utilisez les boutons ci-dessus pour ajouter des éléments</p>
               </div>
             )}
-          {sortedZones.map(zone => (
-            <div key={zone.id} className="flex items-center glass-card p-3 rounded-xl group/zone animate-in slide-in-from-right-4 duration-300">
-               <div className="shrink-0 mr-3">
-                 <ColorPicker 
-                   color={zone.color} 
-                   onChange={(newColor) => onUpdateZone(zone.id, { color: newColor })} 
-                   className="w-6 h-6" 
-                 />
-               </div>
-               
-               <div className="flex-1 min-w-0">
-                 <input
-                   type="text"
-                   value={zone.name || ''}
-                   onChange={(e) => onUpdateZone(zone.id, { name: e.target.value })}
-                   placeholder={
-                      zone.type === 'text' 
-                        ? "Saisir le texte à afficher..." 
-                        : zone.type?.startsWith('infra_')
-                          ? "Libellé de l'élément..."
-                          : "Nom de la zone..."
-                    }
-                   className="w-full bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-200 font-display p-0"
-                 />
-               </div>
+          {sortedZones.map(zone => {
+            const isConfigActive = activeZoneConfigId === zone.id;
+            
+            return (
+              <div key={zone.id} className="flex flex-col gap-1.5 glass-card p-2.5 rounded-xl group/zone relative transition-all">
+                <div className="flex items-center gap-3 w-full">
+                  <div className="shrink-0 w-6 h-6 flex items-center justify-center">
+                    <ColorPicker 
+                      color={zone.color} 
+                      onChange={(newColor) => onUpdateZone(zone.id, { color: newColor })} 
+                      className="w-6 h-6" 
+                    />
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="text"
+                      value={zone.name || ''}
+                      onChange={(e) => onUpdateZone(zone.id, { name: e.target.value })}
+                      placeholder={
+                        zone.type === 'text' 
+                          ? "Saisir le texte à afficher..." 
+                          : zone.type?.startsWith('infra_')
+                            ? "Libellé de l'élément..."
+                            : "Nom de la zone..."
+                      }
+                      className="w-full bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-200 font-display p-0"
+                    />
+                  </div>
 
-                <div className="shrink-0 ml-4 mr-2">
-                  <button 
-                    onClick={() => setZoneToDelete(zone)} 
-                    className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100" 
-                    aria-label="Supprimer la zone"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1 shrink-0 bg-black/20 rounded-lg p-1 border border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveZoneConfigId(isConfigActive ? null : zone.id)}
+                      className={`p-1.5 rounded-md transition-all ${
+                        isConfigActive 
+                          ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/20' 
+                          : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
+                      }`}
+                      title="Configurer l'élément"
+                    >
+                      <SlidersHorizontal className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                    
+                    <button 
+                      type="button"
+                      onClick={() => setZoneToDelete(zone)} 
+                      className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100" 
+                      aria-label="Supprimer la zone"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-            </div>
-          ))}
+
+                {/* Configuration Panel */}
+                {isConfigActive && (
+                  <div className="mt-1.5 p-3 bg-black/40 rounded-xl border border-white/5 flex flex-col gap-3 animate-in slide-in-from-top-2 duration-200">
+                    
+                    {/* Size slider (only for text zones) */}
+                    {zone.type === 'text' && (
+                      <div className="flex flex-col gap-1">
+                        <div className="flex justify-between text-[10px] uppercase tracking-wider text-slate-500 font-bold font-display">
+                          <span>Taille du texte</span>
+                          <span className="text-slate-300 font-semibold">{zone.font_size ?? 14}px</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="8"
+                          max="48"
+                          value={zone.font_size ?? 14}
+                          onChange={(e) => onUpdateZone(zone.id, { font_size: parseInt(e.target.value) })}
+                          className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                        />
+                      </div>
+                    )}
+
+                    {/* Opacity slider */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between text-[10px] uppercase tracking-wider text-slate-500 font-bold font-display">
+                        <span>Opacité</span>
+                        <span className="text-slate-300 font-semibold">{Math.round((zone.opacity ?? 1.0) * 100)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="10"
+                        max="100"
+                        step="5"
+                        value={Math.round((zone.opacity ?? 1.0) * 100)}
+                        onChange={(e) => onUpdateZone(zone.id, { opacity: parseFloat(e.target.value) / 100 })}
+                        className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
       )}
