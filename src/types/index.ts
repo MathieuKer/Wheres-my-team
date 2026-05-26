@@ -32,5 +32,6 @@ export interface Zone {
     height: number;
   };
   rotation: number;
+  type?: string;
   created_at: string;
 }

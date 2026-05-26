@@ -1,7 +1,7 @@
 import { useState, useMemo, memo } from 'react';
 import type { Team, TeamStatus, Zone } from '../../types';
 import { supabase } from '../../lib/supabase';
-import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText } from 'lucide-react';
+import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
@@ -166,6 +166,7 @@ interface SidebarProps {
   onDeleteZone: (id: string) => void;
   onUpdateZone: (id: string, updates: Partial<Zone>) => void;
   onUpdateDescription: (id: string, description: string | null) => void;
+  onAddZone: (zone: Omit<Zone, 'id' | 'map_id' | 'created_at'>) => void;
 }
 
 export const Sidebar = memo(function Sidebar({ 
@@ -179,7 +180,8 @@ export const Sidebar = memo(function Sidebar({
   mode,
   onDeleteZone,
   onUpdateZone,
-  onUpdateDescription
+  onUpdateDescription,
+  onAddZone
 }: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
@@ -187,6 +189,40 @@ export const Sidebar = memo(function Sidebar({
   const [isAdding, setIsAdding] = useState(false);
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [zoneToDelete, setZoneToDelete] = useState<Zone | null>(null);
+
+  const handleAddSpecialElement = (type: string, defaultName: string) => {
+    const isText = type === 'text';
+    const isStage = type === 'infra_stage';
+    
+    // Dimensions par défaut adaptées
+    const width = isText ? 16 : isStage ? 14 : 7;
+    const height = isText ? 6 : isStage ? 10 : 7;
+
+    // Palette de couleurs intelligentes par type
+    let color = '#3b82f6'; // bleu par défaut
+    if (type === 'infra_first_aid' || type === 'infra_hospital') {
+      color = '#ef4444'; // rouge pour la santé
+    } else if (type === 'infra_security') {
+      color = '#f59e0b'; // orange pour la sécurité
+    } else if (type === 'infra_entrance') {
+      color = '#10b981'; // vert pour les entrées
+    } else if (type === 'text') {
+      color = '#ffffff'; // blanc pour le texte
+    }
+
+    onAddZone({
+      name: `${defaultName} ${zones.filter(z => z.type === type).length + 1}`,
+      color,
+      rotation: 0,
+      type,
+      bounds: {
+        x: 50 - width / 2,
+        y: 50 - height / 2,
+        width,
+        height
+      }
+    });
+  };
 
   const sortedTeams = useMemo(() => {
     return [...teams].sort((a, b) => a.name.localeCompare(b.name));
@@ -281,15 +317,90 @@ export const Sidebar = memo(function Sidebar({
 
       {/* Mode Édition - Liste des Zones */}
       {mode === 'edition' && (
-        <div className="flex flex-col gap-3">
-          <div className="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1 flex justify-between items-center font-display">
-            <span>Zones du plan ({zones.length})</span>
-          </div>
-          {zones.length === 0 && (
-            <div className="p-8 text-center glass-card rounded-2xl border-dashed border-2 border-white/5">
-              <p className="text-slate-500 text-xs italic">Dessinez sur la carte pour créer une zone</p>
+        <div className="flex flex-col gap-6">
+          
+          {/* Palette d'Ajout d'Éléments */}
+          <div className="flex flex-col gap-3 glass-card p-4 rounded-2xl">
+            <div className="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1 font-display">
+              Ajouter sur la carte
             </div>
-          )}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => handleAddSpecialElement('zone', 'Zone')}
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-amber-600/20 hover:text-amber-400 p-2.5 rounded-xl text-xs font-semibold text-slate-300 transition-colors border border-white/5"
+              >
+                <Layout className="w-3.5 h-3.5" />
+                Zone
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddSpecialElement('text', 'Texte')}
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-amber-600/20 hover:text-amber-400 p-2.5 rounded-xl text-xs font-semibold text-slate-300 transition-colors border border-white/5"
+              >
+                <Type className="w-3.5 h-3.5" />
+                Texte
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddSpecialElement('infra_first_aid', 'Secours')}
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-amber-600/20 hover:text-amber-400 p-2.5 rounded-xl text-xs font-semibold text-slate-300 transition-colors border border-white/5"
+              >
+                <BriefcaseMedical className="w-3.5 h-3.5" />
+                Soin
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddSpecialElement('infra_hospital', 'Hôpital')}
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-amber-600/20 hover:text-amber-400 p-2.5 rounded-xl text-xs font-semibold text-slate-300 transition-colors border border-white/5"
+              >
+                <Hospital className="w-3.5 h-3.5" />
+                Clinique
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddSpecialElement('infra_entrance', 'Entrée')}
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-amber-600/20 hover:text-amber-400 p-2.5 rounded-xl text-xs font-semibold text-slate-300 transition-colors border border-white/5"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                Entrée
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddSpecialElement('infra_stage', 'Scène')}
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-amber-600/20 hover:text-amber-400 p-2.5 rounded-xl text-xs font-semibold text-slate-300 transition-colors border border-white/5"
+              >
+                <Music className="w-3.5 h-3.5" />
+                Scène
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddSpecialElement('infra_security', 'Sécurité')}
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-amber-600/20 hover:text-amber-400 p-2.5 rounded-xl text-xs font-semibold text-slate-300 transition-colors border border-white/5"
+              >
+                <Shield className="w-3.5 h-3.5" />
+                Sécurité
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddSpecialElement('infra_catering', 'Catering')}
+                className="flex items-center justify-center gap-2 bg-white/5 hover:bg-amber-600/20 hover:text-amber-400 p-2.5 rounded-xl text-xs font-semibold text-slate-300 transition-colors border border-white/5"
+              >
+                <Utensils className="w-3.5 h-3.5" />
+                Catering
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div className="text-xs font-bold uppercase tracking-wider text-amber-500 mb-1 flex justify-between items-center font-display">
+              <span>Éléments du plan ({zones.length})</span>
+            </div>
+            {zones.length === 0 && (
+              <div className="p-8 text-center glass-card rounded-2xl border-dashed border-2 border-white/5">
+                <p className="text-slate-500 text-xs italic">Dessinez sur la carte ou utilisez les boutons ci-dessus pour ajouter des éléments</p>
+              </div>
+            )}
           {sortedZones.map(zone => (
             <div key={zone.id} className="flex items-center glass-card p-3 rounded-xl group/zone animate-in slide-in-from-right-4 duration-300">
                <div className="shrink-0 mr-3">
@@ -305,23 +416,30 @@ export const Sidebar = memo(function Sidebar({
                    type="text"
                    value={zone.name || ''}
                    onChange={(e) => onUpdateZone(zone.id, { name: e.target.value })}
-                   placeholder="Nom de la zone..."
+                   placeholder={
+                      zone.type === 'text' 
+                        ? "Saisir le texte à afficher..." 
+                        : zone.type?.startsWith('infra_')
+                          ? "Libellé de l'élément..."
+                          : "Nom de la zone..."
+                    }
                    className="w-full bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-200 font-display p-0"
                  />
                </div>
 
-               <div className="shrink-0 ml-4 mr-2">
-                 <button 
-                   onClick={() => setZoneToDelete(zone)} 
-                   className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100" 
-                   aria-label="Supprimer la zone"
-                 >
-                   <Trash2 className="w-4 h-4" />
-                 </button>
-               </div>
+                <div className="shrink-0 ml-4 mr-2">
+                  <button 
+                    onClick={() => setZoneToDelete(zone)} 
+                    className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/zone:opacity-100" 
+                    aria-label="Supprimer la zone"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
             </div>
           ))}
         </div>
+      </div>
       )}
 
       {/* Liste Équipes - Uniquement en mode déploiement (ou grisé ?) */}

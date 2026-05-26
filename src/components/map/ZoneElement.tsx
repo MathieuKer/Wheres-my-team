@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import type { Zone } from '../../types';
 import { RotateCw } from 'lucide-react';
+import { ZoneContent } from './ZoneContent';
 
 interface ZoneElementProps {
   zone: Zone;
@@ -102,33 +103,55 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
     globalThis.addEventListener('pointerup', handlePointerUp);
   };
 
+  const type = zone.type || 'zone';
+  const color = zone.color || '#3b82f6';
+  const isText = type === 'text';
+  const isInfra = type.startsWith('infra_');
+
+  let bg = `${color}66`;
+  let border = `${color}99`;
+  let borderWidth = '3px';
+  let borderStyle = 'dashed';
+  let borderRadius = '0px';
+
+  if (isText) {
+    bg = `${color}0d`;
+    border = `${color}33`;
+    borderWidth = '1px';
+    borderStyle = 'solid';
+    borderRadius = '8px';
+  } else if (isInfra) {
+    bg = `${color}26`;
+    border = `${color}59`;
+    borderWidth = '1.5px';
+    borderStyle = 'solid';
+    borderRadius = '12px';
+  }
+
   const displayBounds = (isDragging || isResizing) ? localBounds : zone.bounds;
   const displayRotation = isRotating ? localRotation : (zone.rotation || 0);
 
   return (
     <div 
       ref={elementRef}
-      className={`absolute border-[3px] border-dashed animate-in fade-in duration-500 cursor-move z-10 zone-element nodrag group/zone transition-none select-none`}
+      className={`absolute animate-in fade-in duration-500 cursor-move z-10 zone-element nodrag group/zone transition-none select-none`}
       style={{
         left: `${displayBounds.x}%`,
         top: `${displayBounds.y}%`,
         width: `${displayBounds.width}%`,
         height: `${displayBounds.height}%`,
-        backgroundColor: `${zone.color}66`,
-        borderColor: `${zone.color}99`,
+        backgroundColor: bg,
+        borderColor: border,
+        borderWidth,
+        borderStyle,
+        borderRadius,
         transform: `rotate(${displayRotation}deg)`,
         touchAction: 'none',
         willChange: 'left, top, width, height, transform'
       }}
       onPointerDown={(e) => startDrag(e, 'move')}
     >
-      {/* Label de la zone */}
-      <div 
-        className="absolute top-0 left-0 backdrop-blur px-2 py-1 text-xs text-white font-bold rounded-br uppercase pointer-events-none shadow-lg"
-        style={{ backgroundColor: `${zone.color}cc` }}
-      >
-        {zone.name}
-      </div>
+      <ZoneContent zone={zone} />
 
       {/* Rotation Handle - En haut au centre */}
       <div 

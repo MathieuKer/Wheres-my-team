@@ -117,6 +117,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           onDeleteZone={actions.deleteZone}
           onUpdateZone={actions.updateZone}
           onUpdateDescription={actions.updateTeamDescription}
+          onAddZone={actions.addZone}
         />
 
         <div className="p-6 border-t border-white/5 bg-black/20">

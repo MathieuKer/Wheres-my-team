@@ -4,6 +4,7 @@ import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import type { Team, Zone, TeamStatus } from '../../types';
 import { TeamMarker } from './TeamMarker';
 import { ZoneElement } from './ZoneElement';
+import { ZoneContent } from './ZoneContent';
 import { MapIcon, MousePointer2, ZoomIn, ZoomOut, Maximize, Lock, Unlock } from 'lucide-react';
 
 interface MapContainerProps {
@@ -163,8 +164,33 @@ export function MapContainer({
             />
 
             {/* Rendu des Zones existantes */}
-            {zones.map(zone => (
-              mode === 'edition' ? (
+            {zones.map(zone => {
+              const type = zone.type || 'zone';
+              const color = zone.color || '#3b82f6';
+              const isText = type === 'text';
+              const isInfra = type.startsWith('infra_');
+
+              let bg = `${color}66`;
+              let border = `${color}99`;
+              let borderWidth = '3px';
+              let borderStyle = 'dashed';
+              let borderRadius = '0px';
+
+              if (isText) {
+                bg = `${color}0d`;
+                border = `${color}33`;
+                borderWidth = '1px';
+                borderStyle = 'solid';
+                borderRadius = '8px';
+              } else if (isInfra) {
+                bg = `${color}26`;
+                border = `${color}59`;
+                borderWidth = '1.5px';
+                borderStyle = 'solid';
+                borderRadius = '12px';
+              }
+
+              return mode === 'edition' ? (
                 <ZoneElement 
                   key={zone.id} 
                   zone={zone} 
@@ -173,27 +199,25 @@ export function MapContainer({
               ) : (
                 <div 
                   key={zone.id}
-                  className="absolute border-[3px] border-dashed pointer-events-none zone-element"
+                  className="absolute pointer-events-none zone-element"
                   style={{
                     left: `${zone.bounds.x}%`,
                     top: `${zone.bounds.y}%`,
                     width: `${zone.bounds.width}%`,
                     height: `${zone.bounds.height}%`,
-                    backgroundColor: `${zone.color}66`,
-                    borderColor: `${zone.color}99`,
+                    backgroundColor: bg,
+                    borderColor: border,
+                    borderWidth,
+                    borderStyle,
+                    borderRadius,
                     transform: `rotate(${zone.rotation}deg)`,
                     zIndex: 5
                   }}
                 >
-                  <div 
-                    className="absolute top-0 left-0 backdrop-blur px-2 py-1 text-xs text-white font-bold rounded-br uppercase shadow-lg"
-                    style={{ backgroundColor: `${zone.color}cc` }}
-                  >
-                    {zone.name}
-                  </div>
+                  <ZoneContent zone={zone} />
                 </div>
-              )
-            ))}
+              );
+            })}
 
             {/* Rendu du rectangle en cours de dessin */}
             {isDrawing && currentDrawRect && (
