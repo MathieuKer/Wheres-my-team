@@ -27,8 +27,7 @@ export function MapContainer({
   onTeamMove, 
   onTeamDoubleClick,
   onZoneCreate,
-  onZoneUpdate,
-  onZoneDelete: _onZoneDelete
+  onZoneUpdate
 }: Readonly<MapContainerProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<ReactZoomPanPinchRef>(null);
@@ -210,7 +209,7 @@ export function MapContainer({
                     borderWidth,
                     borderStyle,
                     borderRadius,
-                    opacity: zone.opacity !== undefined ? zone.opacity : 1.0,
+                    opacity: zone.opacity ?? 1,
                     transform: `rotate(${zone.rotation}deg)`,
                     zIndex: 5
                   }}

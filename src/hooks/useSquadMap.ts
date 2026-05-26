@@ -3,7 +3,7 @@ import useSWR, { mutate } from 'swr';
 import { teamsRepo } from '../lib/repositories/teams';
 import { mapRepo } from '../lib/repositories/map';
 import { zoneRepo } from '../lib/repositories/zones';
-import type { TeamStatus, Zone } from '../types';
+import type { TeamStatus, Zone, SquadMap } from '../types';
 
 /**
  * Orchestrateur de domaine "SquadMap".
@@ -27,7 +27,7 @@ export function useSquadMap(mapId: string | null) {
     // We don't have a mapId specific subscribe on mapRepo yet, but we can subscribe to all and filter, 
     // or just rely on the mapRepo.subscribe implementation. For now it listens to all maps.
     const unsubscribeMap = mapRepo.subscribe((payload) => {
-      if (payload.new && (payload.new as any).id === mapId) {
+      if (payload.new && (payload.new as SquadMap).id === mapId) {
         mutate(['map', mapId]);
       }
     });

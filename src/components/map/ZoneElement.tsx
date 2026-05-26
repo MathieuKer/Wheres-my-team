@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import type { Zone } from '../../types';
 import { RotateCw } from 'lucide-react';
 import { ZoneContent } from './ZoneContent';
@@ -22,21 +22,35 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
   const rotationRef = useRef(zone.rotation || 0);
   const elementRef = useRef<HTMLDivElement>(null);
 
-  // Synchronisation quand les props changent (ex: mise à jour par un autre utilisateur ou reset)
-  useEffect(() => {
+  // Synchronisation des états locaux quand la prop zone change (depuis Supabase / parent)
+  // en évitant d'exécuter un setState pendant le render s'il n'y a pas de changement.
+  const [prevBounds, setPrevBounds] = useState(zone.bounds);
+  const [prevRotation, setPrevRotation] = useState(zone.rotation || 0);
+
+  const boundsChanged = 
+    zone.bounds.x !== prevBounds.x || 
+    zone.bounds.y !== prevBounds.y || 
+    zone.bounds.width !== prevBounds.width || 
+    zone.bounds.height !== prevBounds.height;
+  
+  if (boundsChanged || zone.rotation !== prevRotation) {
+    setPrevBounds(zone.bounds);
+    setPrevRotation(zone.rotation || 0);
     if (!isDragging && !isResizing && !isRotating) {
       setLocalBounds(zone.bounds);
       setLocalRotation(zone.rotation || 0);
-      boundsRef.current = zone.bounds;
-      rotationRef.current = zone.rotation || 0;
     }
-  }, [zone.bounds, zone.rotation, isDragging, isResizing, isRotating]);
+  }
 
   const startDrag = (e: React.PointerEvent, type: 'move' | 'resize' | 'rotate') => {
     e.stopPropagation();
     
     const container = document.getElementById('map-bounds-container');
     if (!container) return;
+
+    // Initialize refs at the start of interaction to avoid accessing them during render
+    boundsRef.current = zone.bounds;
+    rotationRef.current = zone.rotation || 0;
 
     const startX = e.clientX;
     const startY = e.clientY;
@@ -155,7 +169,7 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
           borderWidth,
           borderStyle,
           borderRadius,
-          opacity: zone.opacity !== undefined ? zone.opacity : 1.0,
+          opacity: zone.opacity ?? 1,
         }}
       >
         <ZoneContent zone={zone} />

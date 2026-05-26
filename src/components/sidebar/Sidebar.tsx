@@ -24,10 +24,17 @@ const TeamRow = memo(function TeamRow({
   const [description, setDescription] = useState(team.description ?? '');
   const [initialDescription, setInitialDescription] = useState(team.description ?? '');
 
+  let noteButtonClassName = 'text-slate-500 hover:bg-white/5 hover:text-slate-300';
+  if (isEditing) {
+    noteButtonClassName = 'bg-blue-600 text-white shadow-lg shadow-blue-500/20';
+  } else if (team.description) {
+    noteButtonClassName = 'text-blue-400 hover:bg-white/5';
+  }
+
   const handleSave = () => {
     const currentDbVal = team.description ?? '';
     if (currentDbVal !== initialDescription) {
-      const force = window.confirm(
+      const force = globalThis.confirm(
         "Attention : Cette note a été modifiée par un autre utilisateur en arrière-plan.\n" +
         "Voulez-vous forcer l'enregistrement et écraser ses modifications ?"
       );
@@ -90,13 +97,7 @@ const TeamRow = memo(function TeamRow({
             }
             setIsEditing(!isEditing);
           }}
-          className={`p-1.5 rounded-md transition-all ${
-            isEditing 
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
-              : team.description 
-                ? 'text-blue-400 hover:bg-white/5' 
-                : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
-          }`}
+          className={`p-1.5 rounded-md transition-all ${noteButtonClassName}`}
           title={team.description ? "Modifier la note (Contient du texte)" : "Ajouter une note"}
         >
           <FileText className="w-4 h-4" aria-hidden="true" />
@@ -196,8 +197,15 @@ export const Sidebar = memo(function Sidebar({
     const isStage = type === 'infra_stage';
     
     // Dimensions par défaut adaptées
-    const width = isText ? 16 : isStage ? 14 : 7;
-    const height = isText ? 6 : isStage ? 10 : 7;
+    let width = 7;
+    let height = 7;
+    if (isText) {
+      width = 16;
+      height = 6;
+    } else if (isStage) {
+      width = 14;
+      height = 10;
+    }
 
     // Palette de couleurs intelligentes par type
     let color = '#3b82f6'; // bleu par défaut
@@ -405,6 +413,13 @@ export const Sidebar = memo(function Sidebar({
           {sortedZones.map(zone => {
             const isConfigActive = activeZoneConfigId === zone.id;
             
+            let placeholderText = "Nom de la zone...";
+            if (zone.type === 'text') {
+              placeholderText = "Saisir le texte à afficher...";
+            } else if (zone.type?.startsWith('infra_')) {
+              placeholderText = "Libellé de l'élément...";
+            }
+            
             return (
               <div key={zone.id} className="flex flex-col gap-1.5 glass-card p-2.5 rounded-xl group/zone relative transition-all">
                 <div className="flex items-center gap-3 w-full">
@@ -421,13 +436,7 @@ export const Sidebar = memo(function Sidebar({
                       type="text"
                       value={zone.name || ''}
                       onChange={(e) => onUpdateZone(zone.id, { name: e.target.value })}
-                      placeholder={
-                        zone.type === 'text' 
-                          ? "Saisir le texte à afficher..." 
-                          : zone.type?.startsWith('infra_')
-                            ? "Libellé de l'élément..."
-                            : "Nom de la zone..."
-                      }
+                      placeholder={placeholderText}
                       className="w-full bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-200 font-display p-0"
                     />
                   </div>
@@ -473,7 +482,7 @@ export const Sidebar = memo(function Sidebar({
                           min="8"
                           max="48"
                           value={zone.font_size ?? 14}
-                          onChange={(e) => onUpdateZone(zone.id, { font_size: parseInt(e.target.value) })}
+                          onChange={(e) => onUpdateZone(zone.id, { font_size: Number.parseInt(e.target.value, 10) })}
                           className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
                         />
                       </div>
@@ -483,15 +492,15 @@ export const Sidebar = memo(function Sidebar({
                     <div className="flex flex-col gap-1">
                       <div className="flex justify-between text-[10px] uppercase tracking-wider text-slate-500 font-bold font-display">
                         <span>Opacité</span>
-                        <span className="text-slate-300 font-semibold">{Math.round((zone.opacity ?? 1.0) * 100)}%</span>
+                        <span className="text-slate-300 font-semibold">{Math.round((zone.opacity ?? 1) * 100)}%</span>
                       </div>
                       <input
                         type="range"
                         min="10"
                         max="100"
                         step="5"
-                        value={Math.round((zone.opacity ?? 1.0) * 100)}
-                        onChange={(e) => onUpdateZone(zone.id, { opacity: parseFloat(e.target.value) / 100 })}
+                        value={Math.round((zone.opacity ?? 1) * 100)}
+                        onChange={(e) => onUpdateZone(zone.id, { opacity: Number.parseFloat(e.target.value) / 100 })}
                         className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
                       />
                     </div>

@@ -15,7 +15,7 @@ export function createRepository<T extends { id: string }>(tableName: string) {
     async create(mapId: string, item: Omit<T, 'id' | 'map_id' | 'created_at' | 'updated_at'>): Promise<T> {
       const { data, error } = await supabase
         .from(tableName)
-        .insert([{ ...item, map_id: mapId }] as any)
+        .insert([{ ...item, map_id: mapId }] as Record<string, unknown>[])
         .select()
         .single();
       if (error) throw error;
@@ -25,7 +25,7 @@ export function createRepository<T extends { id: string }>(tableName: string) {
     async update(id: string, updates: Partial<T>): Promise<void> {
       const { error } = await supabase
         .from(tableName)
-        .update(updates as any)
+        .update(updates as Record<string, unknown>)
         .eq('id', id);
       if (error) throw error;
     },
