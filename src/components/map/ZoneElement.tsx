@@ -73,7 +73,10 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
           const centerY = zoneRect.top + zoneRect.height / 2;
           
           const angle = Math.atan2(moveEvent.clientY - centerY, moveEvent.clientX - centerX);
-          const degree = (angle * 180) / Math.PI + 90;
+          let degree = (angle * 180) / Math.PI + 90;
+          if (moveEvent.shiftKey) {
+            degree = Math.round(degree / 15) * 15;
+          }
           setLocalRotation(degree);
           rotationRef.current = degree;
         }
@@ -129,11 +132,20 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
 
       {/* Rotation Handle - En haut au centre */}
       <div 
-        className="absolute -top-10 left-1/2 -translate-x-1/2 w-8 h-8 bg-slate-800 border border-white/20 rounded-full flex items-center justify-center cursor-alias opacity-0 group-hover/zone:opacity-100 transition-opacity z-20 shadow-xl text-amber-400 hover:text-amber-300 hover:bg-slate-700 active:scale-90"
+        className={`absolute -top-10 left-1/2 -translate-x-1/2 w-8 h-8 bg-slate-800 border border-white/20 rounded-full flex items-center justify-center cursor-alias z-20 shadow-xl text-amber-400 hover:text-amber-300 hover:bg-slate-700 active:scale-90 transition-opacity ${
+          isRotating ? 'opacity-100 scale-110 border-amber-500' : 'opacity-0 group-hover/zone:opacity-100'
+        }`}
         onPointerDown={(e) => startDrag(e, 'rotate')}
       >
         <RotateCw className="w-4 h-4" />
         <div className="absolute top-full left-1/2 -translate-x-1/2 w-0.5 h-2 bg-white/20" />
+        
+        {/* Affichage de l'angle lors de la rotation */}
+        {isRotating && (
+          <div className="absolute bottom-full mb-2 bg-slate-900 border border-white/10 rounded px-1.5 py-0.5 text-[10px] text-white font-bold whitespace-nowrap shadow-lg">
+            {Math.round(((displayRotation % 360) + 360) % 360)}°
+          </div>
+        )}
       </div>
 
       {/* Resize Handle - En bas à droite */}

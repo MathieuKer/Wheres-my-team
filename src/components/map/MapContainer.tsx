@@ -4,7 +4,7 @@ import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import type { Team, Zone, TeamStatus } from '../../types';
 import { TeamMarker } from './TeamMarker';
 import { ZoneElement } from './ZoneElement';
-import { MapIcon, MousePointer2 } from 'lucide-react';
+import { MapIcon, MousePointer2, ZoomIn, ZoomOut, Maximize, Lock, Unlock } from 'lucide-react';
 
 interface MapContainerProps {
   mapUrl: string | null;
@@ -31,6 +31,7 @@ export function MapContainer({
 }: Readonly<MapContainerProps>) {
   const containerRef = useRef<HTMLDivElement>(null);
   const transformRef = useRef<ReactZoomPanPinchRef>(null);
+  const [isLocked, setIsLocked] = useState(false);
 
   // État local pour le dessin en cours
   const [isDrawing, setIsDrawing] = useState(false);
@@ -144,7 +145,7 @@ export function MapContainer({
         wheel={{ step: 0.005 }}
         disabled={isDrawing} // On désactive le pan pendant qu'on dessine une zone
         doubleClick={{ disabled: true }} 
-        panning={{ excluded: ['nodrag', 'zone-element'] }} 
+        panning={{ disabled: isLocked, excluded: ['nodrag', 'zone-element'] }} 
       >
         <TransformComponent wrapperClass="!w-full !h-full" contentClass="w-full h-full flex items-center justify-center">
           <div 
@@ -215,6 +216,47 @@ export function MapContainer({
           </div>
         </TransformComponent>
       </TransformWrapper>
+
+      {/* FLOATING CONTROLS */}
+      <div className="absolute bottom-4 right-4 z-50 flex flex-col gap-2 bg-slate-900/80 backdrop-blur-md p-2 rounded-2xl border border-white/10 shadow-2xl">
+        <button
+          type="button"
+          onClick={() => transformRef.current?.zoomIn()}
+          className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-slate-300 hover:text-white transition-colors border border-white/5"
+          title="Zoomer"
+        >
+          <ZoomIn className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => transformRef.current?.zoomOut()}
+          className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-slate-300 hover:text-white transition-colors border border-white/5"
+          title="Dézoomer"
+        >
+          <ZoomOut className="w-5 h-5" />
+        </button>
+        <button
+          type="button"
+          onClick={() => transformRef.current?.resetTransform()}
+          className="p-2.5 bg-white/5 hover:bg-white/10 rounded-xl text-slate-300 hover:text-white transition-colors border border-white/5"
+          title="Réinitialiser la vue"
+        >
+          <Maximize className="w-5 h-5" />
+        </button>
+        <div className="h-px bg-white/10 my-1" />
+        <button
+          type="button"
+          onClick={() => setIsLocked(prev => !prev)}
+          className={`p-2.5 rounded-xl transition-all border ${
+            isLocked
+              ? 'bg-red-500/20 border-red-500/30 text-red-400'
+              : 'bg-white/5 border-white/5 text-slate-300 hover:text-white hover:bg-white/10'
+          }`}
+          title={isLocked ? "Déverrouiller le déplacement" : "Verrouiller le déplacement"}
+        >
+          {isLocked ? <Lock className="w-5 h-5" /> : <Unlock className="w-5 h-5" />}
+        </button>
+      </div>
     </div>
   );
 }

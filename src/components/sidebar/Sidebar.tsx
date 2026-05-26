@@ -1,9 +1,158 @@
 import { useState, useMemo, memo } from 'react';
 import type { Team, TeamStatus, Zone } from '../../types';
 import { supabase } from '../../lib/supabase';
-import { Trash2, AlertTriangle, Coffee, Play, UploadCloud } from 'lucide-react';
+import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+
+interface TeamRowProps {
+  team: Team;
+  onUpdateStatus: (id: string, status: TeamStatus) => void;
+  onUpdateColor: (id: string, color: string) => void;
+  onUpdateDescription: (id: string, description: string | null) => void;
+  setTeamToDelete: (team: Team) => void;
+}
+
+const TeamRow = memo(function TeamRow({
+  team,
+  onUpdateStatus,
+  onUpdateColor,
+  onUpdateDescription,
+  setTeamToDelete
+}: Readonly<TeamRowProps>) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [description, setDescription] = useState(team.description ?? '');
+  const [initialDescription, setInitialDescription] = useState(team.description ?? '');
+
+  const handleSave = () => {
+    const currentDbVal = team.description ?? '';
+    if (currentDbVal !== initialDescription) {
+      const force = window.confirm(
+        "Attention : Cette note a été modifiée par un autre utilisateur en arrière-plan.\n" +
+        "Voulez-vous forcer l'enregistrement et écraser ses modifications ?"
+      );
+      if (!force) {
+        setDescription(currentDbVal);
+        setInitialDescription(currentDbVal);
+        setIsEditing(false);
+        return;
+      }
+    }
+    onUpdateDescription(team.id, description.trim() || null);
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-1.5 glass-card p-2 rounded-xl group/team relative focus-within:z-[60] hover:z-[60] transition-all">
+      <div className="flex items-center gap-3 w-full">
+        <div className="shrink-0 w-6 h-6 flex items-center justify-center">
+          <ColorPicker color={team.color} onChange={(c) => onUpdateColor(team.id, c)} />
+        </div>
+
+        <span className="font-semibold text-sm text-slate-200 truncate flex-1 font-display" title={team.name}>
+          {team.name}
+        </span>
+        
+        <div className="flex items-center gap-1 shrink-0 bg-black/20 rounded-lg p-1 border border-white/5">
+          <button 
+            type="button"
+            onClick={() => onUpdateStatus(team.id, 'dispo')}
+            className={`p-1.5 rounded-md transition-all ${team.status === 'dispo' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}
+            aria-label="Marquer comme disponible"
+          >
+            <Play className="w-4 h-4" aria-hidden="true" />
+          </button>
+          <button 
+            type="button"
+            onClick={() => onUpdateStatus(team.id, 'intervention')}
+            className={`p-1.5 rounded-md transition-all ${team.status === 'intervention' ? 'bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse' : 'text-slate-500 hover:bg-white/5 hover:text-red-400'}`}
+            aria-label="Marquer en intervention"
+          >
+            <AlertTriangle className="w-4 h-4" aria-hidden="true" />
+          </button>
+          <button 
+            type="button"
+            onClick={() => onUpdateStatus(team.id, 'pause')}
+            className={`p-1.5 rounded-md transition-all ${team.status === 'pause' ? 'bg-amber-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-amber-400'}`}
+            aria-label="Marquer en pause"
+          >
+            <Coffee className="w-4 h-4" aria-hidden="true" />
+          </button>
+        </div>
+
+        {/* Note button */}
+        <button
+          type="button"
+          onClick={() => {
+            if (!isEditing) {
+              setDescription(team.description ?? '');
+              setInitialDescription(team.description ?? '');
+            }
+            setIsEditing(!isEditing);
+          }}
+          className={`p-1.5 rounded-md transition-all ${
+            isEditing 
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20' 
+              : team.description 
+                ? 'text-blue-400 hover:bg-white/5' 
+                : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'
+          }`}
+          title={team.description ? "Modifier la note (Contient du texte)" : "Ajouter une note"}
+        >
+          <FileText className="w-4 h-4" aria-hidden="true" />
+        </button>
+
+        <button 
+          type="button"
+          onClick={() => setTeamToDelete(team)} 
+          className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/team:opacity-100 shrink-0 mr-1" 
+          aria-label="Supprimer l'équipe"
+        >
+          <Trash2 className="w-4 h-4" aria-hidden="true" />
+        </button>
+      </div>
+
+      {/* Expandable description editor */}
+      {isEditing && (
+        <div className="mt-1.5 p-3 bg-black/40 rounded-xl border border-white/5 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-200">
+          <div className="flex justify-between items-center">
+            <label htmlFor={`note-${team.id}`} className="text-[10px] uppercase tracking-wider text-slate-500 font-bold font-display">
+              Note de l'unité
+            </label>
+            {(team.description ?? '') !== initialDescription && (
+              <span className="text-[10px] text-amber-400 font-semibold animate-pulse">
+                ⚠️ Modifiée en arrière-plan
+              </span>
+            )}
+          </div>
+          <textarea
+            id={`note-${team.id}`}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Membres, matériel, consignes..."
+            className="bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500/30 min-h-[60px] resize-y"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-3 py-1 text-[11px] bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-md transition-colors shadow-md shadow-blue-500/10"
+            >
+              Enregistrer
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
 
 interface SidebarProps {
   teams: Team[];
@@ -16,6 +165,7 @@ interface SidebarProps {
   mode: 'deployment' | 'edition';
   onDeleteZone: (id: string) => void;
   onUpdateZone: (id: string, updates: Partial<Zone>) => void;
+  onUpdateDescription: (id: string, description: string | null) => void;
 }
 
 export const Sidebar = memo(function Sidebar({ 
@@ -28,7 +178,8 @@ export const Sidebar = memo(function Sidebar({
   zones,
   mode,
   onDeleteZone,
-  onUpdateZone
+  onUpdateZone,
+  onUpdateDescription
 }: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
@@ -180,46 +331,14 @@ export const Sidebar = memo(function Sidebar({
           <span>Unités sur le terrain ({teams.length})</span>
         </div>
         {sortedTeams.map(team => (
-           <div key={team.id} className="flex items-center gap-3 glass-card p-2 rounded-xl group/team relative focus-within:z-[60] hover:z-[60] transition-all">
-              
-              <div className="shrink-0 w-6 h-6 flex items-center justify-center">
-                <ColorPicker color={team.color} onChange={(c) => onUpdateColor(team.id, c)} />
-              </div>
-
-              <span className="font-semibold text-sm text-slate-200 truncate flex-1 font-display" title={team.name}>{team.name}</span>
-              
-              <div className="flex items-center gap-1 shrink-0 bg-black/20 rounded-lg p-1 border border-white/5">
-                <button 
-                  onClick={() => onUpdateStatus(team.id, 'dispo')}
-                  className={`p-1.5 rounded-md transition-all ${team.status === 'dispo' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}
-                  aria-label="Marquer comme disponible"
-                >
-                  <Play className="w-4 h-4" aria-hidden="true" />
-                </button>
-                <button 
-                  onClick={() => onUpdateStatus(team.id, 'intervention')}
-                  className={`p-1.5 rounded-md transition-all ${team.status === 'intervention' ? 'bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse' : 'text-slate-500 hover:bg-white/5 hover:text-red-400'}`}
-                  aria-label="Marquer en intervention"
-                >
-                  <AlertTriangle className="w-4 h-4" aria-hidden="true" />
-                </button>
-                <button 
-                  onClick={() => onUpdateStatus(team.id, 'pause')}
-                  className={`p-1.5 rounded-md transition-all ${team.status === 'pause' ? 'bg-amber-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-amber-400'}`}
-                  aria-label="Marquer en pause"
-                >
-                  <Coffee className="w-4 h-4" aria-hidden="true" />
-                </button>
-              </div>
-
-              <button 
-                onClick={() => setTeamToDelete(team)} 
-                className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/team:opacity-100 shrink-0 mr-1" 
-                aria-label="Supprimer l'équipe"
-              >
-                <Trash2 className="w-4 h-4" aria-hidden="true" />
-              </button>
-           </div>
+           <TeamRow 
+             key={team.id}
+             team={team}
+             onUpdateStatus={onUpdateStatus}
+             onUpdateColor={onUpdateColor}
+             onUpdateDescription={onUpdateDescription}
+             setTeamToDelete={setTeamToDelete}
+           />
         ))}
       </div>
       )}

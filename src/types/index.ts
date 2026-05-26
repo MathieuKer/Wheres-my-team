@@ -8,6 +8,7 @@ export interface Team {
   pos_x: number;
   pos_y: number;
   status: TeamStatus;
+  description?: string | null;
   updated_at: string;
 }
 

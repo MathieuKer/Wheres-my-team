@@ -138,14 +138,21 @@ export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMove
         ) : null}
 
         <div 
-          className="absolute bottom-[110%] mb-1 text-[11px] font-bold px-3 py-1 rounded-full shadow-2xl whitespace-nowrap opacity-0 group-hover/outer:opacity-100 transition-all duration-300 translate-y-2 group-hover/outer:translate-y-0 border border-white/20 z-20 pointer-events-none font-display backdrop-blur-md"
+          className={`absolute bottom-[110%] mb-1 text-[11px] px-3 py-1.5 rounded-2xl shadow-2xl opacity-0 group-hover/outer:opacity-100 transition-all duration-300 translate-y-2 group-hover/outer:translate-y-0 border border-white/20 z-20 pointer-events-none font-display backdrop-blur-md flex flex-col gap-0.5 ${
+            team.description ? 'w-48 whitespace-normal text-left' : 'whitespace-nowrap'
+          }`}
           style={{ 
-            backgroundColor: `${team.color}e6`, 
+            backgroundColor: `${team.color}f0`, 
             color: '#fff',
             boxShadow: `0 10px 15px -3px ${team.color}44`
           }}
         >
-          {team.name}
+          <span className="font-bold">{team.name}</span>
+          {team.description ? (
+            <span className="text-[10px] text-white/90 border-t border-white/10 pt-0.5 mt-0.5 font-normal block leading-tight break-words">
+              {team.description}
+            </span>
+          ) : null}
         </div>
         
         <MapPin 

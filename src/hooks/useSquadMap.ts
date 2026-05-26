@@ -72,6 +72,12 @@ export function useSquadMap(mapId: string | null) {
     await teamsRepo.update(id, { status });
   }, [mapId, teams]);
 
+  const updateTeamDescription = useCallback(async (id: string, description: string | null) => {
+    if (!mapId) return;
+    mutate(['teams', mapId], teams.map(t => t.id === id ? { ...t, description } : t), false);
+    await teamsRepo.update(id, { description });
+  }, [mapId, teams]);
+
   const deleteTeam = useCallback(async (id: string) => {
     if (!mapId) return;
     mutate(['teams', mapId], teams.filter(t => t.id !== id), false);
@@ -133,6 +139,7 @@ export function useSquadMap(mapId: string | null) {
     updateTeamPosition,
     updateTeamColor,
     updateTeamStatus,
+    updateTeamDescription,
     deleteTeam,
     updateMapUrl,
     toggleIntervention,
@@ -146,6 +153,7 @@ export function useSquadMap(mapId: string | null) {
     updateTeamPosition,
     updateTeamColor,
     updateTeamStatus,
+    updateTeamDescription,
     deleteTeam,
     updateMapUrl,
     toggleIntervention,
