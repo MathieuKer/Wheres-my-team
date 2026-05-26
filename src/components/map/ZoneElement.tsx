@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import type { Zone } from '../../types';
 import { RotateCw } from 'lucide-react';
 import { ZoneContent } from './ZoneContent';
+import { getZoneStyle } from '../../lib/utils';
 
 interface ZoneElementProps {
   zone: Zone;
@@ -117,30 +118,7 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
     globalThis.addEventListener('pointerup', handlePointerUp);
   };
 
-  const type = zone.type || 'zone';
-  const color = zone.color || '#3b82f6';
-  const isText = type === 'text';
-  const isInfra = type.startsWith('infra_');
-
-  let bg = `${color}66`;
-  let border = `${color}99`;
-  let borderWidth = '3px';
-  let borderStyle = 'dashed';
-  let borderRadius = '0px';
-
-  if (isText) {
-    bg = `${color}0d`;
-    border = `${color}33`;
-    borderWidth = '1px';
-    borderStyle = 'solid';
-    borderRadius = '8px';
-  } else if (isInfra) {
-    bg = `${color}26`;
-    border = `${color}59`;
-    borderWidth = '1.5px';
-    borderStyle = 'solid';
-    borderRadius = '12px';
-  }
+  const { bg, border, borderWidth, borderStyle, borderRadius } = getZoneStyle(zone);
 
   const displayBounds = (isDragging || isResizing) ? localBounds : zone.bounds;
   const displayRotation = isRotating ? localRotation : (zone.rotation || 0);

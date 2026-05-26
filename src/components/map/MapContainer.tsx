@@ -6,6 +6,7 @@ import { TeamMarker } from './TeamMarker';
 import { ZoneElement } from './ZoneElement';
 import { ZoneContent } from './ZoneContent';
 import { MapIcon, MousePointer2, ZoomIn, ZoomOut, Maximize, Lock, Unlock } from 'lucide-react';
+import { getZoneStyle } from '../../lib/utils';
 
 interface MapContainerProps {
   mapUrl: string | null;
@@ -164,30 +165,7 @@ export function MapContainer({
 
             {/* Rendu des Zones existantes */}
             {zones.map(zone => {
-              const type = zone.type || 'zone';
-              const color = zone.color || '#3b82f6';
-              const isText = type === 'text';
-              const isInfra = type.startsWith('infra_');
-
-              let bg = `${color}66`;
-              let border = `${color}99`;
-              let borderWidth = '3px';
-              let borderStyle = 'dashed';
-              let borderRadius = '0px';
-
-              if (isText) {
-                bg = `${color}0d`;
-                border = `${color}33`;
-                borderWidth = '1px';
-                borderStyle = 'solid';
-                borderRadius = '8px';
-              } else if (isInfra) {
-                bg = `${color}26`;
-                border = `${color}59`;
-                borderWidth = '1.5px';
-                borderStyle = 'solid';
-                borderRadius = '12px';
-              }
+              const { bg, border, borderWidth, borderStyle, borderRadius } = getZoneStyle(zone);
 
               return mode === 'edition' ? (
                 <ZoneElement 

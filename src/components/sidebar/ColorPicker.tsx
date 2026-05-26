@@ -46,12 +46,15 @@ export function ColorPicker({ color, onChange, className = '' }: Readonly<ColorP
     }
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        // On vérifie aussi si on n'a pas cliqué dans le portal (qui est hors du container)
-        const portal = document.getElementById('color-picker-portal');
-        if (portal?.contains(e.target as Node)) return;
-        
-        setIsOpen(false);
+      const target = e.target;
+      if (target instanceof Node) {
+        if (containerRef.current && !containerRef.current.contains(target)) {
+          // On vérifie aussi si on n'a pas cliqué dans le portal (qui est hors du container)
+          const portal = document.getElementById('color-picker-portal');
+          if (portal?.contains(target)) return;
+          
+          setIsOpen(false);
+        }
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
