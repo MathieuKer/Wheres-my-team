@@ -33,23 +33,44 @@ export function ColorPicker({ color, onChange, className = '' }: Readonly<ColorP
   const containerRef = useRef<HTMLDivElement>(null);
   const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0 });
 
+  const updatePosition = () => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const width = 208; // Largeur du menu (w-52 = 13rem = 208px)
+      let left = rect.left;
+      
+      // Si le menu dépasse du bord droit de l'écran, on l'aligne par la droite
+      if (left + width > window.innerWidth - 16) {
+        left = rect.right - width;
+      }
+      left = Math.max(8, left); // Empêche de déborder à gauche de l'écran
+
+      setPopoverPos({
+        top: rect.bottom + 8,
+        left
+      });
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
-    // Calculer la position du bouton pour placer le portal
-    if (containerRef.current) {
-      const rect = containerRef.current.getBoundingClientRect();
-      setPopoverPos({
-        top: rect.bottom + window.scrollY + 8,
-        left: rect.left + window.scrollX
-      });
-    }
+    // Calcul initial réactif lors de l'ouverture
+    updatePosition();
+
+    // Recalculer la position lors du scroll ou du resize de la fenêtre pour rester collé
+    const handleResizeOrScroll = () => {
+      updatePosition();
+    };
+
+    window.addEventListener('resize', handleResizeOrScroll);
+    // Le true à la fin écoute le scroll en phase de capture (nécessaire pour le scroll interne de la sidebar)
+    window.addEventListener('scroll', handleResizeOrScroll, true);
 
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target;
       if (target instanceof Node) {
         if (containerRef.current && !containerRef.current.contains(target)) {
-          // On vérifie aussi si on n'a pas cliqué dans le portal (qui est hors du container)
           const portal = document.getElementById('color-picker-portal');
           if (portal?.contains(target)) return;
           
@@ -58,15 +79,28 @@ export function ColorPicker({ color, onChange, className = '' }: Readonly<ColorP
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      window.removeEventListener('resize', handleResizeOrScroll);
+      window.removeEventListener('scroll', handleResizeOrScroll, true);
+    };
   }, [isOpen]);
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isOpen) {
+      updatePosition();
+    }
+    setIsOpen(prev => !prev);
+  };
 
   return (
     <div className={`relative flex items-center justify-center ${className}`} ref={containerRef}>
       {/* Trigger */}
       <button
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleToggle}
         className="w-full h-full flex items-center justify-center outline-none group"
         title="Choisir une couleur"
       >

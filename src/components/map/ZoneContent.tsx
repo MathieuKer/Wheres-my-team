@@ -1,5 +1,6 @@
 import { memo } from 'react';
 import type { Zone } from '../../types';
+import { parseZoneType } from '../../lib/utils';
 import { 
   BriefcaseMedical, 
   Hospital, 
@@ -15,10 +16,10 @@ interface ZoneContentProps {
 }
 
 export const ZoneContent = memo(function ZoneContent({ zone }: Readonly<ZoneContentProps>) {
-  const type = zone.type || 'zone';
+  const { baseType, format } = parseZoneType(zone.type);
   const color = zone.color || '#3b82f6';
 
-  if (type === 'text') {
+  if (baseType === 'text') {
     return (
       <div 
         className="w-full h-full flex items-center justify-center p-2 text-center select-none overflow-hidden"
@@ -34,11 +35,11 @@ export const ZoneContent = memo(function ZoneContent({ zone }: Readonly<ZoneCont
     );
   }
 
-  if (type.startsWith('infra_')) {
+  if (baseType.startsWith('infra_')) {
     let IconComponent = HelpCircle;
     let fallbackLabel = '';
 
-    switch (type) {
+    switch (baseType) {
       case 'infra_first_aid':
         IconComponent = BriefcaseMedical;
         fallbackLabel = 'Soin';
@@ -65,19 +66,29 @@ export const ZoneContent = memo(function ZoneContent({ zone }: Readonly<ZoneCont
         break;
     }
 
+    const isClean = format === 'clean';
+    let iconSizeClass = "w-[45%] h-[45%] min-w-[18px] min-h-[18px]";
+    if (isClean) {
+      iconSizeClass = "w-[55%] h-[55%] min-w-[20px] min-h-[20px]";
+    } else if (format === 'solid' || format === 'circle') {
+      iconSizeClass = "w-[50%] h-[50%] min-w-[18px] min-h-[18px]";
+    }
+
     return (
       <div className="w-full h-full flex flex-col items-center justify-center p-1 select-none text-white relative">
-        {/* Glow effect matching the icon color */}
-        <div 
-          className="absolute inset-0 opacity-[0.03] pointer-events-none rounded-lg"
-          style={{ backgroundColor: color }}
-        />
+        {/* Glow effect - only on non-clean styles */}
+        {!isClean && (
+          <div 
+            className="absolute inset-0 opacity-[0.03] pointer-events-none rounded-lg"
+            style={{ backgroundColor: color }}
+          />
+        )}
         <IconComponent 
-          className="w-[45%] h-[45%] min-w-[18px] min-h-[18px] transition-transform" 
+          className={`${iconSizeClass} transition-transform`} 
           style={{ color }} 
           aria-hidden="true" 
         />
-        <span className="text-[9px] font-extrabold mt-1.5 bg-slate-950/80 backdrop-blur-sm px-1.5 py-0.5 rounded border border-white/5 uppercase max-w-[90%] truncate text-slate-200">
+        <span className="text-[9px] font-extrabold mt-1.5 bg-slate-950/80 backdrop-blur-sm px-1.5 py-0.5 rounded border border-white/5 uppercase max-w-[90%] truncate text-slate-200 shadow-md">
           {zone.name || fallbackLabel}
         </span>
       </div>

@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import type { Zone } from '../../types';
 import { RotateCw } from 'lucide-react';
 import { ZoneContent } from './ZoneContent';
-import { getZoneStyle } from '../../lib/utils';
+import { getZoneStyle, parseZoneType } from '../../lib/utils';
 
 interface ZoneElementProps {
   zone: Zone;
@@ -119,14 +119,21 @@ export function ZoneElement({ zone, onUpdate }: Readonly<ZoneElementProps>) {
   };
 
   const { bg, border, borderWidth, borderStyle, borderRadius } = getZoneStyle(zone);
+  const { format } = parseZoneType(zone.type);
+  const isClean = format === 'clean';
 
   const displayBounds = (isDragging || isResizing) ? localBounds : zone.bounds;
   const displayRotation = isRotating ? localRotation : (zone.rotation || 0);
 
+  let cleanHoverClass = "";
+  if (isClean) {
+    cleanHoverClass = "hover:outline hover:outline-1 hover:outline-dashed hover:outline-white/30 hover:bg-white/5 rounded-lg";
+  }
+
   return (
     <div 
       ref={elementRef}
-      className={`absolute animate-in fade-in duration-500 cursor-move z-10 zone-element nodrag group/zone transition-none select-none`}
+      className={`absolute animate-in fade-in duration-500 cursor-move z-10 zone-element nodrag group/zone transition-none select-none ${cleanHoverClass}`}
       style={{
         left: `${displayBounds.x}%`,
         top: `${displayBounds.y}%`,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { LogOut, Menu, X, ArrowLeft, Layout, Settings } from 'lucide-react';
 import { useSquadMap } from '../hooks/useSquadMap';
 import { Sidebar } from './sidebar/Sidebar';
@@ -13,9 +13,38 @@ interface DashboardProps {
 export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) {
   const [showUnicorn, setShowUnicorn] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(360);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Utilisation de l'orchestrateur profond avec l'ID de la carte
   const { state, actions } = useSquadMap(mapId);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const newWidth = window.innerWidth - moveEvent.clientX;
+      if (newWidth >= 280 && newWidth <= 600) {
+        setSidebarWidth(newWidth);
+      }
+    };
+    const handleMouseUp = () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+    };
+    document.body.style.cursor = 'ew-resize';
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   const triggerUnicorn = () => {
     if (showUnicorn) return;
@@ -64,7 +93,18 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
       </div>
 
       {/* SIDEBAR AREA */}
-      <div className={`fixed inset-y-0 right-0 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} md:translate-x-0 md:relative md:flex w-85 sm:w-96 md:w-80 max-w-[85vw] flex-shrink-0 glass-panel flex-col shadow-2xl z-40 transition-transform duration-500 ease-in-out md:border-none rounded-l-[2.5rem] md:rounded-none`}>
+      <div 
+        className={`fixed inset-y-0 right-0 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} md:translate-x-0 md:relative md:flex max-w-[85vw] flex-shrink-0 glass-panel flex-col shadow-2xl z-40 transition-transform duration-500 ease-in-out md:border-none rounded-l-[2.5rem] md:rounded-none`}
+        style={isMobile ? undefined : { width: `${sidebarWidth}px` }}
+      >
+        {/* DRAG HANDLE FOR RESIZING */}
+        {!isMobile && (
+          <div 
+            className="absolute top-0 bottom-0 left-0 w-1.5 cursor-ew-resize hover:bg-blue-500/30 active:bg-blue-500/70 transition-colors z-50"
+            onMouseDown={handleMouseDown}
+            title="Glisser pour redimensionner la barre"
+          />
+        )}
         <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/20">
           <div className="flex items-center gap-3 font-bold text-xl font-display">
             <button 
@@ -111,6 +151,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           mode={state.mode}
           onAddTeam={actions.addTeam}
           onUpdateColor={actions.updateTeamColor}
+          onUpdateName={actions.updateTeamName}
           onUpdateStatus={actions.updateTeamStatus}
           onDeleteTeam={actions.deleteTeam}
           onMapUpload={actions.updateMapUrl}

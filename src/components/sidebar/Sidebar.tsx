@@ -1,6 +1,7 @@
-import { useState, useMemo, memo } from 'react';
+import { useState, useMemo, memo, useRef, useEffect } from 'react';
 import type { Team, TeamStatus, Zone } from '../../types';
 import { supabase } from '../../lib/supabase';
+import { parseZoneType } from '../../lib/utils';
 import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -9,6 +10,7 @@ interface TeamRowProps {
   team: Team;
   onUpdateStatus: (id: string, status: TeamStatus) => void;
   onUpdateColor: (id: string, color: string) => void;
+  onUpdateName: (id: string, name: string) => void;
   onUpdateDescription: (id: string, description: string | null) => void;
   setTeamToDelete: (team: Team) => void;
 }
@@ -17,6 +19,7 @@ const TeamRow = memo(function TeamRow({
   team,
   onUpdateStatus,
   onUpdateColor,
+  onUpdateName,
   onUpdateDescription,
   setTeamToDelete
 }: Readonly<TeamRowProps>) {
@@ -56,9 +59,15 @@ const TeamRow = memo(function TeamRow({
           <ColorPicker color={team.color} onChange={(c) => onUpdateColor(team.id, c)} />
         </div>
 
-        <span className="font-semibold text-sm text-slate-200 truncate flex-1 font-display" title={team.name}>
-          {team.name}
-        </span>
+        <div className="flex-1 min-w-0">
+          <input
+            type="text"
+            value={team.name}
+            onChange={(e) => onUpdateName(team.id, e.target.value)}
+            className="w-full bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-200 font-display p-0"
+            title={team.name}
+          />
+        </div>
         
         <div className="flex items-center gap-1 shrink-0 bg-black/20 rounded-lg p-1 border border-white/5">
           <button 
@@ -160,6 +169,7 @@ interface SidebarProps {
   onAddTeam: (name: string, color: string) => Promise<void>;
   onUpdateStatus: (id: string, status: TeamStatus) => void;
   onUpdateColor: (id: string, color: string) => void;
+  onUpdateName: (id: string, name: string) => void;
   onDeleteTeam: (id: string) => void;
   onMapUpload: (url: string) => void;
   zones: Zone[];
@@ -175,6 +185,7 @@ export const Sidebar = memo(function Sidebar({
   onAddTeam, 
   onUpdateStatus, 
   onUpdateColor, 
+  onUpdateName,
   onDeleteTeam, 
   onMapUpload,
   zones,
@@ -188,6 +199,121 @@ export const Sidebar = memo(function Sidebar({
   const [newColor, setNewColor] = useState('#3b82f6');
   const [uploading, setUploading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState(-1);
+  const [hasUserEdited, setHasUserEdited] = useState(false);
+
+  // Alphabet phonétique international (NATO)
+  const PHONETIC_ALPHABET = useMemo(() => [
+    'Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliett',
+    'Kilo', 'Lima', 'Mike', 'November', 'Oscar', 'Papa', 'Quebec', 'Romeo', 'Sierra', 'Tango',
+    'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yankee', 'Zulu'
+  ], []);
+
+  // Équipes volantes par défaut
+  const VOLANTES = useMemo(() => [
+    'Volante 1', 'Volante 2', 'Volante 3', 'Volante 4', 'Volante 5'
+  ], []);
+
+  // Génération dynamique du pool de suggestions basé sur les équipes existantes
+  const suggestionsPool = useMemo(() => {
+    const existingNames = new Set(teams.map(t => t.name.trim().toLowerCase()));
+    const pool: string[] = [];
+
+    // Noms phonétiques (avec incrémentation si déjà pris)
+    for (const base of PHONETIC_ALPHABET) {
+      if (!existingNames.has(base.toLowerCase())) {
+        pool.push(base);
+      } else {
+        let num = 2;
+        while (existingNames.has(`${base.toLowerCase()} ${num}`)) {
+          num++;
+        }
+        pool.push(`${base} ${num}`);
+      }
+    }
+
+    // Volantes (avec incrémentation si déjà prises)
+    for (const v of VOLANTES) {
+      if (!existingNames.has(v.toLowerCase())) {
+        pool.push(v);
+      }
+    }
+
+    let vNum = 1;
+    while (existingNames.has(`volante ${vNum}`)) {
+      vNum++;
+    }
+    if (vNum > 5) {
+      pool.push(`Volante ${vNum}`);
+    }
+
+    return pool;
+  }, [teams, PHONETIC_ALPHABET, VOLANTES]);
+
+  const nextDefaultSuggestion = useMemo(() => {
+    return suggestionsPool[0] || '';
+  }, [suggestionsPool]);
+
+  // Pré-remplit automatiquement le champ lorsqu'il n'a pas été modifié par l'utilisateur
+  useEffect(() => {
+    if (!hasUserEdited) {
+      setNewName(nextDefaultSuggestion);
+    }
+  }, [nextDefaultSuggestion, hasUserEdited]);
+
+  const filteredSuggestions = useMemo(() => {
+    const cleanInput = newName.trim().toLowerCase();
+    if (!cleanInput) {
+      return suggestionsPool.slice(0, 5);
+    }
+    const startsWith = suggestionsPool.filter(name => 
+      name.toLowerCase().startsWith(cleanInput)
+    );
+    const contains = suggestionsPool.filter(name => 
+      !name.toLowerCase().startsWith(cleanInput) && name.toLowerCase().includes(cleanInput)
+    );
+    return [...startsWith, ...contains].slice(0, 6);
+  }, [newName, suggestionsPool]);
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+    setShowSuggestions(true);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showSuggestions || filteredSuggestions.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedSuggestionIndex(prev => (prev + 1) % filteredSuggestions.length);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedSuggestionIndex(prev => (prev - 1 + filteredSuggestions.length) % filteredSuggestions.length);
+    } else if (e.key === 'Enter' || e.key === 'Tab') {
+      if (focusedSuggestionIndex >= 0 && focusedSuggestionIndex < filteredSuggestions.length) {
+        e.preventDefault();
+        const selected = filteredSuggestions[focusedSuggestionIndex];
+        setNewName(selected);
+        setShowSuggestions(false);
+        setFocusedSuggestionIndex(-1);
+      }
+    } else if (e.key === 'Escape') {
+      setShowSuggestions(false);
+      setFocusedSuggestionIndex(-1);
+    }
+  };
+
+  const handleSuggestionClick = (suggestion: string) => {
+    setNewName(suggestion);
+    setHasUserEdited(true);
+    setShowSuggestions(false);
+    setFocusedSuggestionIndex(-1);
+    inputRef.current?.focus();
+  };
+
   const [teamToDelete, setTeamToDelete] = useState<Team | null>(null);
   const [zoneToDelete, setZoneToDelete] = useState<Zone | null>(null);
   const [activeZoneConfigId, setActiveZoneConfigId] = useState<string | null>(null);
@@ -220,7 +346,7 @@ export const Sidebar = memo(function Sidebar({
     }
 
     onAddZone({
-      name: `${defaultName} ${zones.filter(z => z.type === type).length + 1}`,
+      name: `${defaultName} ${zones.filter(z => z.type?.split(':')[0] === type).length + 1}`,
       color,
       rotation: 0,
       type,
@@ -255,6 +381,7 @@ export const Sidebar = memo(function Sidebar({
     try {
       await onAddTeam(cleanName, newColor);
       setNewName('');
+      setHasUserEdited(false);
     } catch (err) {
       console.error(err);
       alert("Erreur lors de la création de l'unité.");
@@ -302,13 +429,53 @@ export const Sidebar = memo(function Sidebar({
       {mode === 'deployment' && (
         <form onSubmit={handleAdd} className="flex flex-col gap-3 glass-card p-4 rounded-2xl relative focus-within:z-[60] hover:z-[60] transition-all">
           <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 font-display">Nouvelle Équipe</div>
-          <input 
-            type="text" 
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Ex: Unité Alpha…" 
-            className="bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
-          />
+          <div className="relative">
+            <input 
+              ref={inputRef}
+              type="text" 
+              value={newName}
+              onChange={(e) => {
+                setNewName(e.target.value);
+                setHasUserEdited(true);
+                setShowSuggestions(true);
+                setFocusedSuggestionIndex(-1);
+              }}
+              onFocus={handleFocus}
+              onBlur={() => {
+                setTimeout(() => setShowSuggestions(false), 200);
+              }}
+              onKeyDown={handleKeyDown}
+              placeholder="Ex: Unité Alpha…" 
+              className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all"
+            />
+            {showSuggestions && filteredSuggestions.length > 0 && (
+              <div className="absolute left-0 right-0 top-full mt-1.5 backdrop-blur-md bg-slate-950/90 border border-white/10 rounded-xl overflow-hidden shadow-2xl z-[70] max-h-48 overflow-y-auto flex flex-col divide-y divide-white/5 animate-in fade-in duration-200">
+                {filteredSuggestions.map((suggestion, index) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      handleSuggestionClick(suggestion);
+                    }}
+                    onMouseEnter={() => setFocusedSuggestionIndex(index)}
+                    className={`px-4 py-2.5 text-left text-xs transition-colors flex justify-between items-center ${
+                      index === focusedSuggestionIndex 
+                        ? 'bg-blue-600 text-white font-semibold' 
+                        : 'text-slate-300 hover:bg-white/5'
+                    }`}
+                  >
+                    <span>{suggestion}</span>
+                    <span className={`text-[9px] uppercase tracking-wider font-bold ${
+                      index === focusedSuggestionIndex ? 'text-blue-200' : 'text-slate-500'
+                    }`}>
+                      {suggestion.includes('Volante') ? 'Mobile' : 'Phonétique'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex gap-2 relative focus-within:z-[60]">
             <div className="h-10 w-[20%] bg-white/5 border border-white/10 rounded-xl flex items-center justify-center shrink-0">
               <ColorPicker color={newColor} onChange={setNewColor} />
@@ -504,6 +671,65 @@ export const Sidebar = memo(function Sidebar({
                         className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
                       />
                     </div>
+
+                    {/* Visual format selector (only for infra elements) */}
+                    {zone.type?.startsWith('infra_') && (
+                      <div className="flex flex-col gap-3 border-t border-white/5 pt-2.5 mt-0.5">
+                        <div className="text-[10px] uppercase tracking-wider text-slate-500 font-bold font-display">
+                          Format d'affichage
+                        </div>
+                        <div className="grid grid-cols-2 gap-1.5 mt-0.5">
+                          {[
+                            { id: 'clean', label: 'Épuré (sans fond)' },
+                            { id: 'transparent', label: 'Transparent' },
+                            { id: 'solid', label: 'Plaque Solide' },
+                            { id: 'circle', label: 'Macaron' }
+                          ].map(opt => {
+                            const { baseType, format, bgCol } = parseZoneType(zone.type);
+                            const isActive = format === opt.id;
+                            return (
+                              <button
+                                key={opt.id}
+                                type="button"
+                                onClick={() => {
+                                  const newType = bgCol ? `${baseType}:${opt.id}:${bgCol}` : `${baseType}:${opt.id}`;
+                                  onUpdateZone(zone.id, { type: newType });
+                                }}
+                                className={`px-2 py-1.5 rounded-lg text-[10px] font-bold border transition-all ${
+                                  isActive 
+                                    ? 'bg-amber-600 border-amber-500 text-white shadow-md shadow-amber-500/20' 
+                                    : 'bg-white/5 border-white/10 text-slate-400 hover:text-slate-200'
+                                }`}
+                              >
+                                {opt.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Background color picker (hidden for clean format) */}
+                        {(() => {
+                          const { baseType, format, bgCol } = parseZoneType(zone.type);
+                          if (format === 'clean') return null;
+                          return (
+                            <div className="flex items-center justify-between gap-3 mt-1 bg-black/20 p-2 rounded-xl border border-white/5">
+                              <span className="text-[10px] uppercase tracking-wider text-slate-400 font-bold font-display">
+                                Couleur de fond
+                              </span>
+                              <div className="shrink-0 w-8 h-8 flex items-center justify-center bg-black/45 rounded-lg border border-white/10 relative z-[60]">
+                                <ColorPicker 
+                                  color={bgCol || '#090d16'} 
+                                  onChange={(newBg) => {
+                                    onUpdateZone(zone.id, { type: `${baseType}:${format}:${newBg}` });
+                                  }}
+                                  className="w-6 h-6" 
+                                />
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -525,6 +751,7 @@ export const Sidebar = memo(function Sidebar({
              team={team}
              onUpdateStatus={onUpdateStatus}
              onUpdateColor={onUpdateColor}
+             onUpdateName={onUpdateName}
              onUpdateDescription={onUpdateDescription}
              setTeamToDelete={setTeamToDelete}
            />
