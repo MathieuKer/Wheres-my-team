@@ -100,9 +100,25 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
         {/* DRAG HANDLE FOR RESIZING */}
         {!isMobile && (
           <div 
-            className="absolute top-0 bottom-0 left-0 w-1.5 cursor-ew-resize hover:bg-blue-500/30 active:bg-blue-500/70 transition-colors z-50"
+            role="separator"
+            tabIndex={0}
+            aria-label="Redimensionner la barre latérale"
+            aria-valuenow={sidebarWidth}
+            aria-valuemin={280}
+            aria-valuemax={600}
+            aria-orientation="vertical"
+            className="absolute top-0 bottom-0 left-0 w-1.5 cursor-ew-resize hover:bg-blue-500/30 active:bg-blue-500/70 focus:bg-blue-500/50 outline-none transition-colors z-50"
             onMouseDown={handleMouseDown}
-            title="Glisser pour redimensionner la barre"
+            onKeyDown={(e) => {
+              if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                setSidebarWidth(prev => Math.min(600, prev + 10));
+              } else if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                setSidebarWidth(prev => Math.max(280, prev - 10));
+              }
+            }}
+            title="Glisser ou utiliser les flèches clavier pour redimensionner la barre"
           />
         )}
         <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/20">

@@ -224,14 +224,14 @@ export const Sidebar = memo(function Sidebar({
 
     // Noms phonétiques (avec incrémentation si déjà pris)
     for (const base of PHONETIC_ALPHABET) {
-      if (!existingNames.has(base.toLowerCase())) {
-        pool.push(base);
-      } else {
+      if (existingNames.has(base.toLowerCase())) {
         let num = 2;
         while (existingNames.has(`${base.toLowerCase()} ${num}`)) {
           num++;
         }
         pool.push(`${base} ${num}`);
+      } else {
+        pool.push(base);
       }
     }
 

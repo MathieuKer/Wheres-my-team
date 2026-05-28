@@ -44,7 +44,6 @@ export function getZoneStyle(zone: Zone): ZoneStyle {
       border = 'transparent';
       borderWidth = '0px';
       borderStyle = 'none';
-      borderRadius = '0px';
     } else if (format === 'solid') {
       bg = bgCol || '#090d16f2';
       border = color;
