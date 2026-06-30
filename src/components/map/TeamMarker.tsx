@@ -1,24 +1,38 @@
-import { useState, useRef, memo } from 'react';
+import { useRef, memo } from 'react';
 import type { Team } from '../../types';
 import { AlertTriangle, MapPin } from 'lucide-react';
 
 interface TeamMarkerProps {
   team: Team;
   onDoubleClick: () => void;
-  onMoveEnd: (id: string, x: number, y: number) => void;
+  onDragStart: (id: string) => void;
+  onDragMove: (id: string, dx: number, dy: number) => void;
+  onDragEnd: (id: string, dx: number, dy: number) => void;
+  isDraggable?: boolean;
+  zoomScale?: number;
+  isSelected?: boolean;
 }
 
-export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMoveEnd }: Readonly<TeamMarkerProps>) {
-  const [localPos, setLocalPos] = useState<{ x: number; y: number } | null>(null);
+export const TeamMarker = memo(function TeamMarker({ 
+  team, 
+  onDoubleClick, 
+  onDragStart,
+  onDragMove,
+  onDragEnd, 
+  isDraggable = true,
+  zoomScale = 1,
+  isSelected = false
+}: Readonly<TeamMarkerProps>) {
   const lastClickTimeRef = useRef<number>(0);
 
   const style: React.CSSProperties = {
     position: 'absolute',
-    left: `${localPos ? localPos.x : team.pos_x}%`,
-    top: `${localPos ? localPos.y : team.pos_y}%`,
-    transform: 'translate(-50%, -100%)',
-    zIndex: localPos ? 999 : 10,
-    cursor: localPos ? 'grabbing' : 'grab',
+    left: `${team.pos_x}%`,
+    top: `${team.pos_y}%`,
+    transform: `translate(-50%, -100%) scale(${1 / zoomScale})`,
+    transformOrigin: 'bottom center',
+    zIndex: isSelected ? 999 : (team.status === 'intervention' ? 50 : 10),
+    cursor: isDraggable ? 'grab' : 'default',
     touchAction: 'none',
   };
 
@@ -36,6 +50,10 @@ export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMove
     pinStroke = '#94a3b8'; 
   }
 
+  if (isSelected) {
+    iconClass += " drop-shadow-[0_0_10px_#3b82f6]";
+  }
+
   const getAbbrev = (name: string) => {
     const words = name.split(' ').filter(Boolean);
     if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
@@ -43,6 +61,7 @@ export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMove
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (!isDraggable) return;
     if (e.button !== 0) return; 
     e.stopPropagation();
 
@@ -54,52 +73,37 @@ export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMove
     }
     lastClickTimeRef.current = now;
 
-    const target = e.currentTarget;
-    target.setPointerCapture(e.pointerId);
-
     const container = document.getElementById('map-bounds-container');
     if (!container) return;
 
     const rect = container.getBoundingClientRect();
-    const currentX = localPos ? localPos.x : team.pos_x;
-    const currentY = localPos ? localPos.y : team.pos_y;
-    
-    const pinScreenX = rect.left + (currentX / 100) * rect.width;
-    const pinScreenY = rect.top + (currentY / 100) * rect.height;
-    
-    const offsetX = e.clientX - pinScreenX;
-    const offsetY = e.clientY - pinScreenY;
+    const startX = e.clientX;
+    const startY = e.clientY;
+
+    // Début du glissement parent
+    onDragStart(team.id);
 
     const onPointerMove = (moveEvent: PointerEvent) => {
-      const currentRect = container.getBoundingClientRect();
-      const targetPinX = moveEvent.clientX - offsetX;
-      const targetPinY = moveEvent.clientY - offsetY;
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
 
-      let percentX = ((targetPinX - currentRect.left) / currentRect.width) * 100;
-      let percentY = ((targetPinY - currentRect.top) / currentRect.height) * 100;
+      const percentDx = (dx / rect.width) * 100;
+      const percentDy = (dy / rect.height) * 100;
 
-      percentX = Math.max(0, Math.min(100, percentX));
-      percentY = Math.max(0, Math.min(100, percentY));
-
-      setLocalPos({ x: percentX, y: percentY });
+      onDragMove(team.id, percentDx, percentDy);
     };
 
     const onPointerUp = (upEvent: PointerEvent) => {
       globalThis.removeEventListener('pointermove', onPointerMove);
       globalThis.removeEventListener('pointerup', onPointerUp);
       
-      const currentRect = container.getBoundingClientRect();
-      const targetPinX = upEvent.clientX - offsetX;
-      const targetPinY = upEvent.clientY - offsetY;
+      const dx = upEvent.clientX - startX;
+      const dy = upEvent.clientY - startY;
 
-      let percentX = ((targetPinX - currentRect.left) / currentRect.width) * 100;
-      let percentY = ((targetPinY - currentRect.top) / currentRect.height) * 100;
+      const percentDx = (dx / rect.width) * 100;
+      const percentDy = (dy / rect.height) * 100;
 
-      percentX = Math.max(0, Math.min(100, percentX));
-      percentY = Math.max(0, Math.min(100, percentY));
-
-      setLocalPos(null);
-      onMoveEnd(team.id, percentX, percentY);
+      onDragEnd(team.id, percentDx, percentDy);
     };
 
     globalThis.addEventListener('pointermove', onPointerMove);
@@ -116,7 +120,7 @@ export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMove
         {/* Effet d'intervention: Ping et Badge */}
         {team.status === 'intervention' ? (
           <>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[65%] w-12 h-12 pointer-events-none">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[65%] w-8 h-8 md:w-12 md:h-12 pointer-events-none">
               <div 
                 className="absolute inset-0 rounded-full animate-ping opacity-30" 
                 style={{ backgroundColor: team.color }}
@@ -129,10 +133,10 @@ export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMove
             
             {/* Badge de notification inversé */}
             <div 
-              className="absolute top-0 right-0 translate-x-[20%] -translate-y-[20%] z-30 flex items-center justify-center w-[22px] h-[22px] rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] border-2 border-white"
+              className="absolute top-0 right-0 translate-x-[20%] -translate-y-[20%] z-30 flex items-center justify-center w-4 h-4 md:w-[22px] md:h-[22px] rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] border md:border-2 border-white"
               style={{ backgroundColor: team.color }}
             >
-              <AlertTriangle className="w-3 h-3 text-white fill-white animate-pulse" />
+              <AlertTriangle className="w-2 h-2 md:w-3 md:h-3 text-white fill-white animate-pulse" />
             </div>
           </>
         ) : null}
@@ -156,14 +160,18 @@ export const TeamMarker = memo(function TeamMarker({ team, onDoubleClick, onMove
         </div>
         
         <MapPin 
-          className={`w-11 h-11 ${iconClass} filter drop-shadow-lg relative z-10`} 
+          className={`w-8 h-8 md:w-11 md:h-11 ${iconClass} filter drop-shadow-lg relative z-10`} 
           style={{ fill: pinFill, color: pinStroke, strokeWidth: 2.5 }} 
           aria-hidden="true"
         />
 
         {/* L'abréviation permanente */}
         <div 
-          className="absolute top-[85%] left-1/2 -translate-x-1/2 mt-0.5 text-[9px] font-black leading-none px-2 py-1 rounded-full shadow-lg whitespace-nowrap bg-white text-slate-900 border border-slate-200 pointer-events-none z-10 font-display transition-transform group-hover/outer:scale-90"
+          className={`absolute top-[85%] left-1/2 -translate-x-1/2 mt-0.5 text-[7px] md:text-[9px] font-black leading-none px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-lg whitespace-nowrap border pointer-events-none z-10 font-display transition-all ${
+            isSelected 
+              ? 'bg-blue-600 text-white border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.4)] scale-105' 
+              : 'bg-white text-slate-900 border-slate-200 shadow-sm'
+          }`}
           style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}
         >
           {getAbbrev(team.name)}

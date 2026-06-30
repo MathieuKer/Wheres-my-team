@@ -25,7 +25,7 @@ export function createRepository<T extends { id: string }>(tableName: string) {
     async update(id: string, updates: Partial<T>): Promise<void> {
       const { error } = await supabase
         .from(tableName)
-        .update(updates as any)
+        .update(updates as Record<string, unknown>)
         .eq('id', id);
       if (error) throw error;
     },

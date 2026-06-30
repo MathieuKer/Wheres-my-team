@@ -68,7 +68,7 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
   }
 
   return (
-    <div className="min-h-screen w-screen bg-background p-6 md:p-12 overflow-y-auto">
+    <div className="h-[100dvh] w-screen bg-background p-6 md:p-12 overflow-y-auto">
       <div className="max-w-6xl mx-auto">
         <header className="flex justify-between items-center mb-12 glass-panel p-6 rounded-3xl">
           <div className="flex items-center gap-4">

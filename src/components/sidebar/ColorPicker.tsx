@@ -2,6 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 
 const PRESET_COLORS = [
+  '#ffffff', // White
+  '#cbd5e1', // Light slate
+  '#64748b', // Slate
+  '#000000', // Black
   '#ef4444', // Red
   '#f97316', // Orange
   '#f59e0b', // Amber
@@ -19,7 +23,9 @@ const PRESET_COLORS = [
   '#d946ef', // Fuchsia
   '#ec4899', // Pink
   '#f43f5e', // Rose
-  '#94a3b8', // Slate
+  '#78350f', // Brown
+  '#1e293b', // Dark Slate
+  '#0f172a', // Very Dark Blue
 ];
 
 interface ColorPickerProps {
@@ -124,7 +130,7 @@ export function ColorPicker({ color, onChange, className = '' }: Readonly<ColorP
             <button
               key={c}
               type="button"
-              className={`w-6 h-6 rounded-full transition-all hover:scale-125 focus:outline-none focus:ring-2 focus:ring-white/50 ${color === c ? 'ring-2 ring-white scale-110 shadow-lg' : ''}`}
+              className={`w-6 h-6 rounded-full border border-white/10 transition-all hover:scale-125 focus:outline-none focus:ring-2 focus:ring-white/50 ${color === c ? 'ring-2 ring-white scale-110 shadow-lg' : ''}`}
               style={{ backgroundColor: c, boxShadow: color === c ? `0 0 10px ${c}` : undefined }}
               onClick={() => {
                 onChange(c);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogOut, Menu, X, ArrowLeft, Layout, Settings } from 'lucide-react';
+import { LogOut, Menu, X, ArrowLeft, Layout, Settings, Eye } from 'lucide-react';
 import { useSquadMap } from '../hooks/useSquadMap';
 import { Sidebar } from './sidebar/Sidebar';
 import { MapContainer } from './map/MapContainer';
@@ -12,7 +12,7 @@ interface DashboardProps {
 
 export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) {
   const [showUnicorn, setShowUnicorn] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => typeof window !== 'undefined' && window.matchMedia?.('(max-width: 768px)').matches === false);
   const [sidebarWidth, setSidebarWidth] = useState(360);
   const [isMobile, setIsMobile] = useState(false);
 
@@ -67,8 +67,8 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
         />
       ) : null}
 
-      {/* MOBILE MENU BUTTON */}
-      <div className="absolute top-4 left-4 z-50 md:hidden">
+      {/* MENU BUTTON */}
+      <div className="absolute top-4 left-4 z-50">
         <button 
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className="bg-slate-800/90 backdrop-blur p-2.5 rounded-lg text-white shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-slate-600 hover:bg-slate-700 transition-colors flex items-center justify-center"
@@ -78,13 +78,13 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
       </div>
 
       {/* MAP AREA */}
-      <div className="flex-1 w-full h-full relative md:border-r border-border flex flex-col">
+      <div className="flex-1 min-w-0 w-full h-full relative md:border-r border-border flex flex-col">
         <MapContainer 
           mapUrl={state.mapUrl}
           teams={state.teams}
           zones={state.zones}
           mode={state.mode}
-          onTeamMove={actions.updateTeamPosition}
+          onTeamsMove={actions.updateTeamsPositions}
           onTeamDoubleClick={actions.toggleIntervention}
           onZoneCreate={actions.addZone}
           onZoneUpdate={actions.updateZone}
@@ -94,7 +94,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
 
       {/* SIDEBAR AREA */}
       <div 
-        className={`fixed inset-y-0 right-0 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} md:translate-x-0 md:relative md:flex max-w-[85vw] flex-shrink-0 glass-panel flex-col shadow-2xl z-40 transition-transform duration-500 ease-in-out md:border-none rounded-l-[2.5rem] md:rounded-none`}
+        className={`fixed inset-y-0 right-0 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} md:translate-x-0 md:relative flex max-w-[85vw] flex-shrink-0 glass-panel flex-col shadow-2xl z-40 transition-all duration-300 md:border-none rounded-l-[2.5rem] md:rounded-none ${isSidebarOpen ? 'md:flex' : 'md:hidden'}`}
         style={isMobile ? undefined : { width: `${sidebarWidth}px` }}
       >
         {/* DRAG HANDLE FOR RESIZING */}
@@ -121,44 +121,70 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
             title="Glisser ou utiliser les flèches clavier pour redimensionner la barre"
           />
         )}
-        <div className="p-6 border-b border-white/5 flex items-center justify-between bg-black/20">
-          <div className="flex items-center gap-3 font-bold text-xl font-display">
+        <div className="p-4 md:p-5 border-b border-white/5 bg-black/20 flex flex-col gap-3.5">
+          {/* Première ligne : Navigation et Déconnexion */}
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-2.5 font-bold text-lg font-display">
+              <button 
+                onClick={onBack}
+                className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center border border-white/10 transition-colors"
+                title="Retour aux cartes"
+              >
+                <ArrowLeft className="w-4 h-4 text-slate-400" />
+              </button>
+              <span className="bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-blue-400/50 truncate max-w-[150px] sm:max-w-none">Répartition</span>
+              <span className="text-xs bg-white/5 px-2 py-0.5 rounded-full text-slate-500 border border-white/5">{state.teams.length}</span>
+            </div>
+
             <button 
-              onClick={onBack}
-              className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center border border-white/10 transition-colors"
-              title="Retour aux cartes"
+              onClick={signOut} 
+              className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all" 
+              title="Se déconnecter"
+              aria-label="Se déconnecter"
             >
-              <ArrowLeft className="w-4 h-4 text-slate-400" />
+              <LogOut className="w-4.5 h-4.5" aria-hidden="true" />
             </button>
-            <span className="premium-gradient-text">Répartition</span>
-            <span className="text-xs bg-white/5 px-2 py-0.5 rounded-full text-slate-500 border border-white/5">{state.teams.length}</span>
           </div>
 
-          <div className="flex items-center gap-1 bg-white/5 p-1 rounded-xl border border-white/10">
+          {/* Deuxième ligne : Sélecteur de mode segmenté */}
+          <div className="grid grid-cols-3 bg-black/40 p-1 rounded-xl border border-white/5 gap-1">
             <button
-              onClick={() => state.mode !== 'deployment' && actions.toggleMode()}
-              className={`p-2 rounded-lg transition-all ${state.mode === 'deployment' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20' : 'text-slate-500 hover:text-slate-300'}`}
+              onClick={() => actions.setMode('reader')}
+              className={`py-1.5 rounded-lg text-[11px] font-semibold font-display flex items-center justify-center gap-1.5 transition-all ${
+                state.mode === 'reader' 
+                  ? 'bg-slate-700 text-white shadow-md' 
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="Mode Lecteur"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Lecteur</span>
+            </button>
+            <button
+              onClick={() => actions.setMode('deployment')}
+              className={`py-1.5 rounded-lg text-[11px] font-semibold font-display flex items-center justify-center gap-1.5 transition-all ${
+                state.mode === 'deployment' 
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' 
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
               title="Mode Déploiement"
             >
-              <Layout className="w-4 h-4" />
+              <Layout className="w-3.5 h-3.5" />
+              <span>Terrain</span>
             </button>
             <button
-              onClick={() => state.mode !== 'edition' && actions.toggleMode()}
-              className={`p-2 rounded-lg transition-all ${state.mode === 'edition' ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/20' : 'text-slate-500 hover:text-slate-300'}`}
+              onClick={() => actions.setMode('edition')}
+              className={`py-1.5 rounded-lg text-[11px] font-semibold font-display flex items-center justify-center gap-1.5 transition-all ${
+                state.mode === 'edition' 
+                  ? 'bg-amber-600 text-white shadow-md shadow-amber-500/10' 
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
               title="Mode Édition de Plan"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-3.5 h-3.5" />
+              <span>Plan</span>
             </button>
           </div>
-
-          <button 
-            onClick={signOut} 
-            className="p-2 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all" 
-            title="Se déconnecter"
-            aria-label="Se déconnecter"
-          >
-            <LogOut className="w-5 h-5" aria-hidden="true" />
-          </button>
         </div>
         
         <Sidebar 
@@ -175,16 +201,19 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           onUpdateZone={actions.updateZone}
           onUpdateDescription={actions.updateTeamDescription}
           onAddZone={actions.addZone}
+          onTeamsMove={actions.updateTeamsPositions}
         />
 
-        <div className="p-6 border-t border-white/5 bg-black/20">
-          <button 
-            onClick={actions.requestFlush}
-            className="w-full bg-red-950/30 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all py-3 rounded-xl text-sm font-bold text-red-400 font-display shadow-lg shadow-red-900/10"
-          >
-            Flush Événement
-          </button>
-        </div>
+        {state.mode === 'edition' && (
+          <div className="p-6 border-t border-white/5 bg-black/20">
+            <button 
+              onClick={actions.requestFlush}
+              className="w-full bg-red-950/30 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all py-3 rounded-xl text-sm font-bold text-red-400 font-display shadow-lg shadow-red-900/10"
+            >
+              Flush Événement
+            </button>
+          </div>
+        )}
       </div>
 
       {/* EASTER EGG */}

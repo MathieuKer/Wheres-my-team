@@ -2,7 +2,7 @@ import { useState, useMemo, memo, useRef, useEffect } from 'react';
 import type { Team, TeamStatus, Zone } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { parseZoneType } from '../../lib/utils';
-import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal } from 'lucide-react';
+import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal, RotateCcw } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
@@ -13,6 +13,9 @@ interface TeamRowProps {
   onUpdateName: (id: string, name: string) => void;
   onUpdateDescription: (id: string, description: string | null) => void;
   setTeamToDelete: (team: Team) => void;
+  isCompact?: boolean;
+  isReadOnly?: boolean;
+  onTeamsMove?: (moves: { id: string; x: number; y: number }[]) => void;
 }
 
 const TeamRow = memo(function TeamRow({
@@ -21,17 +24,30 @@ const TeamRow = memo(function TeamRow({
   onUpdateColor,
   onUpdateName,
   onUpdateDescription,
-  setTeamToDelete
+  setTeamToDelete,
+  isCompact = false,
+  isReadOnly = false,
+  onTeamsMove
 }: Readonly<TeamRowProps>) {
   const [isEditing, setIsEditing] = useState(false);
   const [description, setDescription] = useState(team.description ?? '');
   const [initialDescription, setInitialDescription] = useState(team.description ?? '');
 
-  let noteButtonClassName = 'text-slate-500 hover:bg-white/5 hover:text-slate-300';
+  const handleResetPosition = () => {
+    if (!onTeamsMove) return;
+    if (confirm(`Voulez-vous replacer l'unité "${team.name}" au centre de la carte ?`)) {
+      onTeamsMove([{ id: team.id, x: 50, y: 50 }]);
+    }
+  };
+
+  const btnPadding = isCompact ? 'p-1 rounded' : 'p-1.5 rounded-md';
+  const iconClassName = isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4';
+
+  let noteButtonClassName = `text-slate-500 hover:bg-white/5 hover:text-slate-300 ${btnPadding}`;
   if (isEditing) {
-    noteButtonClassName = 'bg-blue-600 text-white shadow-lg shadow-blue-500/20';
+    noteButtonClassName = `bg-blue-600 text-white shadow-lg shadow-blue-500/20 ${btnPadding}`;
   } else if (team.description) {
-    noteButtonClassName = 'text-blue-400 hover:bg-white/5';
+    noteButtonClassName = `text-blue-400 hover:bg-white/5 ${btnPadding}`;
   }
 
   const handleSave = () => {
@@ -53,48 +69,87 @@ const TeamRow = memo(function TeamRow({
   };
 
   return (
-    <div className="flex flex-col gap-1.5 glass-card p-2 rounded-xl group/team relative focus-within:z-[60] hover:z-[60] transition-all">
-      <div className="flex items-center gap-3 w-full">
-        <div className="shrink-0 w-6 h-6 flex items-center justify-center">
-          <ColorPicker color={team.color} onChange={(c) => onUpdateColor(team.id, c)} />
+    <div className={`flex flex-col ${isCompact ? 'gap-1 p-1.5 rounded-lg' : 'gap-1.5 p-2 rounded-xl'} glass-card group/team relative focus-within:z-[60] hover:z-[60] transition-all`}>
+      <div className={`flex items-center ${isCompact ? 'gap-1.5' : 'gap-3'} w-full`}>
+        <div className={`shrink-0 ${isCompact ? 'w-5 h-5' : 'w-6 h-6'} flex items-center justify-center`}>
+          {isReadOnly ? (
+            <div 
+              className="w-5 h-5 rounded-full border border-white/20 shadow-sm" 
+              style={{ backgroundColor: team.color, boxShadow: `0 0 12px ${team.color}66` }}
+            />
+          ) : (
+            <ColorPicker color={team.color} onChange={(c) => onUpdateColor(team.id, c)} />
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
-          <input
-            type="text"
-            value={team.name}
-            onChange={(e) => onUpdateName(team.id, e.target.value)}
-            className="w-full bg-transparent border-none focus:ring-0 text-sm font-semibold text-slate-200 font-display p-0"
-            title={team.name}
-          />
+          {isReadOnly ? (
+            <span 
+              className={`w-full text-slate-200 font-semibold font-display truncate block p-0 ${isCompact ? 'text-xs' : 'text-sm'}`}
+              title={team.name}
+            >
+              {team.name}
+            </span>
+          ) : (
+            <input
+              type="text"
+              value={team.name}
+              onChange={(e) => onUpdateName(team.id, e.target.value)}
+              className={`w-full bg-transparent border-none focus:ring-0 ${isCompact ? 'text-xs' : 'text-sm'} font-semibold text-slate-200 font-display p-0`}
+              title={team.name}
+            />
+          )}
         </div>
         
-        <div className="flex items-center gap-1 shrink-0 bg-black/20 rounded-lg p-1 border border-white/5">
-          <button 
-            type="button"
-            onClick={() => onUpdateStatus(team.id, 'dispo')}
-            className={`p-1.5 rounded-md transition-all ${team.status === 'dispo' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}
-            aria-label="Marquer comme disponible"
-          >
-            <Play className="w-4 h-4" aria-hidden="true" />
-          </button>
-          <button 
-            type="button"
-            onClick={() => onUpdateStatus(team.id, 'intervention')}
-            className={`p-1.5 rounded-md transition-all ${team.status === 'intervention' ? 'bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse' : 'text-slate-500 hover:bg-white/5 hover:text-red-400'}`}
-            aria-label="Marquer en intervention"
-          >
-            <AlertTriangle className="w-4 h-4" aria-hidden="true" />
-          </button>
-          <button 
-            type="button"
-            onClick={() => onUpdateStatus(team.id, 'pause')}
-            className={`p-1.5 rounded-md transition-all ${team.status === 'pause' ? 'bg-amber-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-amber-400'}`}
-            aria-label="Marquer en pause"
-          >
-            <Coffee className="w-4 h-4" aria-hidden="true" />
-          </button>
-        </div>
+        {isReadOnly ? (
+          <div className="shrink-0 text-[10px] px-2.5 py-1 rounded-lg bg-black/30 border border-white/5 text-slate-400 font-semibold font-display flex items-center gap-1.5">
+            {team.status === 'intervention' && (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-red-400">Intervention</span>
+              </>
+            )}
+            {team.status === 'pause' && (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                <span className="text-amber-500">Pause</span>
+              </>
+            )}
+            {team.status === 'dispo' && (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span className="text-emerald-400">Disponible</span>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className={`flex items-center gap-0.5 shrink-0 bg-black/20 rounded-lg ${isCompact ? 'p-0.5' : 'p-1'} border border-white/5`}>
+            <button 
+              type="button"
+              onClick={() => onUpdateStatus(team.id, 'dispo')}
+              className={`${btnPadding} transition-all ${team.status === 'dispo' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}
+              aria-label="Marquer comme disponible"
+            >
+              <Play className={iconClassName} aria-hidden="true" />
+            </button>
+            <button 
+              type="button"
+              onClick={() => onUpdateStatus(team.id, 'intervention')}
+              className={`${btnPadding} transition-all ${team.status === 'intervention' ? 'bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse' : 'text-slate-500 hover:bg-white/5 hover:text-red-400'}`}
+              aria-label="Marquer en intervention"
+            >
+              <AlertTriangle className={iconClassName} aria-hidden="true" />
+            </button>
+            <button 
+              type="button"
+              onClick={() => onUpdateStatus(team.id, 'pause')}
+              className={`${btnPadding} transition-all ${team.status === 'pause' ? 'bg-amber-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-amber-400'}`}
+              aria-label="Marquer en pause"
+            >
+              <Coffee className={iconClassName} aria-hidden="true" />
+            </button>
+          </div>
+        )}
 
         {/* Note button */}
         <button
@@ -106,20 +161,34 @@ const TeamRow = memo(function TeamRow({
             }
             setIsEditing(!isEditing);
           }}
-          className={`p-1.5 rounded-md transition-all ${noteButtonClassName}`}
-          title={team.description ? "Modifier la note (Contient du texte)" : "Ajouter une note"}
+          className={noteButtonClassName}
+          title={team.description ? "Voir/Modifier la note" : "Ajouter une note"}
         >
-          <FileText className="w-4 h-4" aria-hidden="true" />
+          <FileText className={iconClassName} aria-hidden="true" />
         </button>
 
-        <button 
-          type="button"
-          onClick={() => setTeamToDelete(team)} 
-          className="p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/team:opacity-100 shrink-0 mr-1" 
-          aria-label="Supprimer l'équipe"
-        >
-          <Trash2 className="w-4 h-4" aria-hidden="true" />
-        </button>
+        {!isReadOnly && onTeamsMove && (
+          <button 
+            type="button"
+            onClick={handleResetPosition} 
+            className={`${btnPadding} text-slate-600 hover:text-blue-400 hover:bg-blue-400/10 rounded-md transition-all opacity-0 group-hover/team:opacity-100 shrink-0 cursor-pointer`} 
+            title="Recentrer l'unité"
+            aria-label="Recentrer l'unité"
+          >
+            <RotateCcw className={iconClassName} aria-hidden="true" />
+          </button>
+        )}
+
+        {!isReadOnly && (
+          <button 
+            type="button"
+            onClick={() => setTeamToDelete(team)} 
+            className={`${btnPadding} text-slate-600 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all opacity-0 group-hover/team:opacity-100 shrink-0 mr-1`} 
+            aria-label="Supprimer l'équipe"
+          >
+            <Trash2 className={iconClassName} aria-hidden="true" />
+          </button>
+        )}
       </div>
 
       {/* Expandable description editor */}
@@ -129,35 +198,43 @@ const TeamRow = memo(function TeamRow({
             <label htmlFor={`note-${team.id}`} className="text-[10px] uppercase tracking-wider text-slate-500 font-bold font-display">
               Note de l'unité
             </label>
-            {(team.description ?? '') !== initialDescription && (
+            {!isReadOnly && (team.description ?? '') !== initialDescription && (
               <span className="text-[10px] text-amber-400 font-semibold animate-pulse">
                 ⚠️ Modifiée en arrière-plan
               </span>
             )}
           </div>
-          <textarea
-            id={`note-${team.id}`}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Membres, matériel, consignes..."
-            className="bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500/30 min-h-[60px] resize-y"
-          />
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={() => setIsEditing(false)}
-              className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
-            >
-              Annuler
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              className="px-3 py-1 text-[11px] bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-md transition-colors shadow-md shadow-blue-500/10"
-            >
-              Enregistrer
-            </button>
-          </div>
+          {isReadOnly ? (
+            <div className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed py-1">
+              {team.description || <span className="italic text-slate-600">Aucune note pour cette unité</span>}
+            </div>
+          ) : (
+            <>
+              <textarea
+                id={`note-${team.id}`}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Membres, matériel, consignes..."
+                className="bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500/30 min-h-[60px] resize-y"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  className="px-3 py-1 text-[11px] bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-md transition-colors shadow-md shadow-blue-500/10"
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>
@@ -171,13 +248,14 @@ interface SidebarProps {
   onUpdateColor: (id: string, color: string) => void;
   onUpdateName: (id: string, name: string) => void;
   onDeleteTeam: (id: string) => void;
-  onMapUpload: (url: string) => void;
+  onMapUpload: (url: string | null) => void;
   zones: Zone[];
-  mode: 'deployment' | 'edition';
+  mode: 'reader' | 'deployment' | 'edition';
   onDeleteZone: (id: string) => void;
   onUpdateZone: (id: string, updates: Partial<Zone>) => void;
   onUpdateDescription: (id: string, description: string | null) => void;
   onAddZone: (zone: Omit<Zone, 'id' | 'map_id' | 'created_at'>) => void;
+  onTeamsMove?: (moves: { id: string; x: number; y: number }[]) => void;
 }
 
 export const Sidebar = memo(function Sidebar({ 
@@ -193,12 +271,28 @@ export const Sidebar = memo(function Sidebar({
   onDeleteZone,
   onUpdateZone,
   onUpdateDescription,
-  onAddZone
+  onAddZone,
+  onTeamsMove
 }: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
   const [uploading, setUploading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [isCompact, setIsCompact] = useState(() => {
+    try {
+      return localStorage.getItem('squad_map_sidebar_compact') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('squad_map_sidebar_compact', String(isCompact));
+    } catch (err) {
+      console.error(err);
+    }
+  }, [isCompact]);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -416,14 +510,16 @@ export const Sidebar = memo(function Sidebar({
   return (
     <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-8 custom-scrollbar">
       
-      {/* Upload Carte */}
-      <div className="glass-card p-1 rounded-2xl overflow-hidden">
-        <label className="flex items-center justify-center gap-3 cursor-pointer bg-white/5 hover:bg-white/10 transition-all duration-300 py-3 rounded-xl text-sm font-semibold text-slate-300 group">
-           <UploadCloud className="w-5 h-5 text-blue-400 group-hover:scale-110 transition-transform" aria-hidden="true" />
-           {uploading ? 'Upload en cours…' : 'Changer le plan'}
-           <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading}/>
-        </label>
-      </div>
+      {/* Upload Carte - Uniquement disponible en mode édition ("Plan") */}
+      {mode === 'edition' && (
+        <div className="glass-card p-1 rounded-2xl overflow-hidden shrink-0">
+          <label className="flex items-center justify-center gap-3 cursor-pointer bg-white/5 hover:bg-white/10 transition-all duration-300 py-3 rounded-xl text-sm font-semibold text-slate-300 group">
+             <UploadCloud className="w-5 h-5 text-blue-400 group-hover:scale-110 transition-transform" aria-hidden="true" />
+             {uploading ? 'Upload en cours…' : 'Changer le plan'}
+             <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading}/>
+          </label>
+        </div>
+      )}
 
       {/* Ajout Équipe - Uniquement en mode déploiement */}
       {mode === 'deployment' && (
@@ -739,11 +835,24 @@ export const Sidebar = memo(function Sidebar({
       </div>
       )}
 
-      {/* Liste Équipes - Uniquement en mode déploiement (ou grisé ?) */}
-      {mode === 'deployment' && (
+      {/* Liste Équipes - Visible en mode déploiement ou en mode lecteur */}
+      {(mode === 'deployment' || mode === 'reader') && (
         <div className="flex flex-col gap-3">
-        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex justify-between items-center font-display">
+        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex justify-between items-center font-display w-full">
           <span>Unités sur le terrain ({teams.length})</span>
+          <div className="flex gap-1.5 items-center">
+            <button
+              type="button"
+              onClick={() => setIsCompact(prev => !prev)}
+              className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold transition-all ${
+                isCompact 
+                  ? 'bg-blue-600/20 border-blue-500/30 text-blue-400' 
+                  : 'bg-white/5 border-white/5 text-slate-400 hover:text-white'
+              }`}
+            >
+              {isCompact ? 'Mode normal' : 'Mode compact'}
+            </button>
+          </div>
         </div>
         {sortedTeams.map(team => (
            <TeamRow 
@@ -754,6 +863,9 @@ export const Sidebar = memo(function Sidebar({
              onUpdateName={onUpdateName}
              onUpdateDescription={onUpdateDescription}
              setTeamToDelete={setTeamToDelete}
+             isCompact={isCompact}
+             isReadOnly={mode === 'reader'}
+             onTeamsMove={onTeamsMove}
            />
         ))}
       </div>

@@ -15,7 +15,7 @@ export function useSquadMap(mapId: string | null) {
   const { data: zones = [], isLoading: loadingZones } = useSWR(mapId ? ['zones', mapId] : null, () => zoneRepo.getAll(mapId!));
 
   const [isAdding, setIsAdding] = useState(false);
-  const [mode, setMode] = useState<'deployment' | 'edition'>('deployment');
+  const [mode, setMode] = useState<'reader' | 'deployment' | 'edition'>('reader');
 
   useEffect(() => {
     if (!mapId) return;
@@ -58,6 +58,21 @@ export function useSquadMap(mapId: string | null) {
     if (!mapId) return;
     mutate(['teams', mapId], teams.map(t => t.id === id ? { ...t, pos_x: x, pos_y: y } : t), false);
     await teamsRepo.update(id, { pos_x: x, pos_y: y });
+  }, [mapId, teams]);
+
+  const updateTeamsPositions = useCallback(async (moves: { id: string; x: number; y: number }[]) => {
+    if (!mapId || moves.length === 0) return;
+    const moveMap = new Map(moves.map(m => [m.id, m]));
+    mutate(
+      ['teams', mapId], 
+      teams.map(t => {
+        const move = moveMap.get(t.id);
+        return move ? { ...t, pos_x: move.x, pos_y: move.y } : t;
+      }), 
+      false
+    );
+    await Promise.all(moves.map(m => teamsRepo.update(m.id, { pos_x: m.x, pos_y: m.y })));
+    mutate(['teams', mapId]);
   }, [mapId, teams]);
 
   const updateTeamColor = useCallback(async (id: string, color: string) => {
@@ -136,13 +151,10 @@ export function useSquadMap(mapId: string | null) {
     await zoneRepo.delete(id);
   }, [mapId, zones]);
 
-  const toggleMode = useCallback(() => {
-    setMode(prev => prev === 'deployment' ? 'edition' : 'deployment');
-  }, []);
-
   const memoizedActions = useMemo(() => ({
     addTeam,
     updateTeamPosition,
+    updateTeamsPositions,
     updateTeamColor,
     updateTeamName,
     updateTeamStatus,
@@ -154,10 +166,11 @@ export function useSquadMap(mapId: string | null) {
     addZone,
     updateZone,
     deleteZone,
-    toggleMode
+    setMode
   }), [
     addTeam,
     updateTeamPosition,
+    updateTeamsPositions,
     updateTeamColor,
     updateTeamName,
     updateTeamStatus,
@@ -169,7 +182,7 @@ export function useSquadMap(mapId: string | null) {
     addZone,
     updateZone,
     deleteZone,
-    toggleMode
+    setMode
   ]);
 
   return {
