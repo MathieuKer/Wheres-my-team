@@ -1,6 +1,6 @@
-import { useRef, memo } from 'react';
+import { useRef, useState, memo } from 'react';
 import type { Team } from '../../types';
-import { AlertTriangle, MapPin } from 'lucide-react';
+import { AlertTriangle, MapPin, Navigation } from 'lucide-react';
 
 interface TeamMarkerProps {
   team: Team;
@@ -11,6 +11,8 @@ interface TeamMarkerProps {
   isDraggable?: boolean;
   zoomScale?: number;
   isSelected?: boolean;
+  mode?: 'reader' | 'deployment' | 'edition';
+  onConfigure: () => void;
 }
 
 export const TeamMarker = memo(function TeamMarker({ 
@@ -21,8 +23,11 @@ export const TeamMarker = memo(function TeamMarker({
   onDragEnd, 
   isDraggable = true,
   zoomScale = 1,
-  isSelected = false
+  isSelected = false,
+  mode = 'reader',
+  onConfigure
 }: Readonly<TeamMarkerProps>) {
+  const [isHovered, setIsHovered] = useState(false);
   const lastClickTimeRef = useRef<number>(0);
 
   const style: React.CSSProperties = {
@@ -31,7 +36,7 @@ export const TeamMarker = memo(function TeamMarker({
     top: `${team.pos_y}%`,
     transform: `translate(-50%, -100%) scale(${1 / zoomScale})`,
     transformOrigin: 'bottom center',
-    zIndex: isSelected ? 999 : (team.status === 'intervention' ? 50 : 10),
+    zIndex: isHovered ? 800 : (isSelected ? 500 : (team.status === 'intervention' ? 50 : 10)),
     cursor: isDraggable ? 'grab' : 'default',
     touchAction: 'none',
   };
@@ -45,6 +50,10 @@ export const TeamMarker = memo(function TeamMarker({
     innerClass += " animate-bounce";
     iconClass = `drop-shadow-[0_0_15px_${team.color}cc]`;
     pinFill = team.color; 
+  } else if (team.status === 'en_route') {
+    innerClass += " animate-pulse";
+    iconClass = `drop-shadow-[0_0_12px_#3b82f6cc]`;
+    pinFill = team.color;
   } else if (team.status === 'pause') {
     iconClass = "opacity-60 grayscale-[0.5]";
     pinStroke = '#94a3b8'; 
@@ -80,7 +89,6 @@ export const TeamMarker = memo(function TeamMarker({
     const startX = e.clientX;
     const startY = e.clientY;
 
-    // Début du glissement parent
     onDragStart(team.id);
 
     const onPointerMove = (moveEvent: PointerEvent) => {
@@ -104,21 +112,38 @@ export const TeamMarker = memo(function TeamMarker({
       const percentDy = (dy / rect.height) * 100;
 
       onDragEnd(team.id, percentDx, percentDy);
+
+      // Open on tactile tap (touch pointer and did not move more than 5px)
+      const isTouch = upEvent.pointerType === 'touch';
+      const movedDistance = Math.sqrt(dx * dx + dy * dy);
+      if (isTouch && movedDistance < 5) {
+        onConfigure();
+      }
     };
 
     globalThis.addEventListener('pointermove', onPointerMove);
     globalThis.addEventListener('pointerup', onPointerUp);
   };
 
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (mode === 'reader') return;
+    e.preventDefault();
+    e.stopPropagation();
+    onConfigure();
+  };
+
   return (
     <div 
       style={style} 
       onPointerDown={handlePointerDown}
+      onContextMenu={handleContextMenu}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
       className="nodrag group/outer relative"
     >
       <div className={innerClass}>
-        {/* Effet d'intervention: Ping et Badge */}
-        {team.status === 'intervention' ? (
+        {/* Intervention: Ping and Alert Badge */}
+        {team.status === 'intervention' && (
           <>
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[65%] w-8 h-8 md:w-12 md:h-12 pointer-events-none">
               <div 
@@ -131,18 +156,31 @@ export const TeamMarker = memo(function TeamMarker({
               />
             </div>
             
-            {/* Badge de notification inversé */}
             <div 
-              className="absolute top-0 right-0 translate-x-[20%] -translate-y-[20%] z-30 flex items-center justify-center w-4 h-4 md:w-[22px] md:h-[22px] rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] border md:border-2 border-white"
+              className="absolute top-0 right-0 translate-x-[20%] -translate-y-[20%] z-30 flex items-center justify-center w-4 h-4 md:w-[22px] md:h-[22px] rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] border border-white"
               style={{ backgroundColor: team.color }}
             >
               <AlertTriangle className="w-2 h-2 md:w-3 md:h-3 text-white fill-white animate-pulse" />
             </div>
           </>
-        ) : null}
+        )}
 
+        {/* En Route: Navigation Badge */}
+        {team.status === 'en_route' && (
+          <div 
+            className="absolute top-0 right-0 translate-x-[20%] -translate-y-[20%] z-30 flex items-center justify-center w-4 h-4 md:w-[22px] md:h-[22px] rounded-full shadow-[0_0_10px_rgba(0,0,0,0.5)] border border-white bg-blue-600"
+          >
+            <Navigation className="w-2 h-2 md:w-3 md:h-3 text-white fill-white animate-pulse" />
+          </div>
+        )}
+
+        {/* Name Tooltip (visible on hover) */}
         <div 
-          className={`absolute bottom-[110%] mb-1 text-[11px] px-3 py-1.5 rounded-2xl shadow-2xl opacity-0 group-hover/outer:opacity-100 transition-all duration-300 translate-y-2 group-hover/outer:translate-y-0 border border-white/20 z-20 pointer-events-none font-display backdrop-blur-md flex flex-col gap-0.5 ${
+          className={`absolute mb-1 text-[11px] px-3 py-1.5 rounded-2xl shadow-2xl opacity-0 group-hover/outer:opacity-100 transition-all duration-300 border border-white/20 z-20 pointer-events-none font-display flex flex-col gap-0.5 ${
+            team.pos_y < 15
+              ? 'top-[115%] bottom-auto translate-y-[-8px] group-hover/outer:translate-y-0' 
+              : 'bottom-[110%] top-auto translate-y-2 group-hover/outer:translate-y-0'
+          } ${
             team.description ? 'w-48 whitespace-normal text-left' : 'whitespace-nowrap'
           }`}
           style={{ 
@@ -165,7 +203,7 @@ export const TeamMarker = memo(function TeamMarker({
           aria-hidden="true"
         />
 
-        {/* L'abréviation permanente */}
+        {/* Permanent Abbreviation Badge */}
         <div 
           className={`absolute top-[85%] left-1/2 -translate-x-1/2 mt-0.5 text-[7px] md:text-[9px] font-black leading-none px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-lg whitespace-nowrap border pointer-events-none z-10 font-display transition-all ${
             isSelected 

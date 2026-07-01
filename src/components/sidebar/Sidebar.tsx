@@ -2,7 +2,7 @@ import { useState, useMemo, memo, useRef, useEffect } from 'react';
 import type { Team, TeamStatus, Zone } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { parseZoneType } from '../../lib/utils';
-import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal, RotateCcw, Navigation, Clock, X, PlusCircle } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
@@ -32,6 +32,26 @@ const TeamRow = memo(function TeamRow({
   const [isEditing, setIsEditing] = useState(false);
   const [description, setDescription] = useState(team.description ?? '');
   const [initialDescription, setInitialDescription] = useState(team.description ?? '');
+  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
+
+  // Close context menu on external click
+  useEffect(() => {
+    if (!contextMenuPos) return;
+    const closeMenu = () => setContextMenuPos(null);
+    document.addEventListener('click', closeMenu);
+    return () => document.removeEventListener('click', closeMenu);
+  }, [contextMenuPos]);
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (isReadOnly) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    setContextMenuPos({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
 
   const handleResetPosition = () => {
     if (!onTeamsMove) return;
@@ -69,7 +89,10 @@ const TeamRow = memo(function TeamRow({
   };
 
   return (
-    <div className={`flex flex-col ${isCompact ? 'gap-1 p-1.5 rounded-lg' : 'gap-1.5 p-2 rounded-xl'} glass-card group/team relative focus-within:z-[60] hover:z-[60] transition-all`}>
+    <div 
+      onContextMenu={handleContextMenu}
+      className={`flex flex-col ${isCompact ? 'gap-1 p-1.5 rounded-lg' : 'gap-1.5 p-2 rounded-xl'} glass-card group/team relative focus-within:z-[60] hover:z-[60] transition-all`}
+    >
       <div className={`flex items-center ${isCompact ? 'gap-1.5' : 'gap-3'} w-full`}>
         <div className={`shrink-0 ${isCompact ? 'w-5 h-5' : 'w-6 h-6'} flex items-center justify-center`}>
           {isReadOnly ? (
@@ -106,19 +129,25 @@ const TeamRow = memo(function TeamRow({
             {team.status === 'intervention' && (
               <>
                 <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-red-400">Intervention</span>
+                <span className="text-red-400 font-black">Intervention</span>
+              </>
+            )}
+            {team.status === 'en_route' && (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <span className="text-blue-400 font-black">En route</span>
               </>
             )}
             {team.status === 'pause' && (
               <>
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span className="text-amber-500">Pause</span>
+                <span className="text-amber-500 font-black">Pause</span>
               </>
             )}
             {team.status === 'dispo' && (
               <>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-emerald-400">Disponible</span>
+                <span className="text-emerald-400 font-black">Disponible</span>
               </>
             )}
           </div>
@@ -131,6 +160,14 @@ const TeamRow = memo(function TeamRow({
               aria-label="Marquer comme disponible"
             >
               <Play className={iconClassName} aria-hidden="true" />
+            </button>
+            <button 
+              type="button"
+              onClick={() => onUpdateStatus(team.id, 'en_route')}
+              className={`${btnPadding} transition-all ${team.status === 'en_route' ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-blue-400'}`}
+              aria-label="Marquer en route"
+            >
+              <Navigation className={iconClassName} aria-hidden="true" />
             </button>
             <button 
               type="button"
@@ -237,9 +274,52 @@ const TeamRow = memo(function TeamRow({
           )}
         </div>
       )}
+
+      {/* Right-click Custom Context Menu */}
+      {contextMenuPos && (
+        <div 
+          className="absolute bg-slate-950/95 border border-white/10 rounded-xl py-1 shadow-2xl z-[100] w-40 text-left font-display animate-in fade-in duration-100"
+          style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
+          onPointerDown={(e) => e.stopPropagation()} // Stop propagation to avoid drag trigger
+        >
+          <div className="px-3 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-white/5 mb-1">
+            Changer statut
+          </div>
+          <button 
+            onClick={() => { onUpdateStatus(team.id, 'dispo'); setContextMenuPos(null); }}
+            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-400 font-semibold flex items-center gap-2"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+            Disponible
+          </button>
+          <button 
+            onClick={() => { onUpdateStatus(team.id, 'en_route'); setContextMenuPos(null); }}
+            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-blue-500/20 hover:text-blue-400 font-semibold flex items-center gap-2"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+            En direction
+          </button>
+          <button 
+            onClick={() => { onUpdateStatus(team.id, 'intervention'); setContextMenuPos(null); }}
+            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-red-500/20 hover:text-red-400 font-semibold flex items-center gap-2"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+            Intervention
+          </button>
+          <button 
+            onClick={() => { onUpdateStatus(team.id, 'pause'); setContextMenuPos(null); }}
+            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-amber-500/20 hover:text-amber-400 font-semibold flex items-center gap-2"
+          >
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+            En pause
+          </button>
+        </div>
+      )}
     </div>
   );
 });
+
+import type { Intervention } from '../../types';
 
 interface SidebarProps {
   teams: Team[];
@@ -250,12 +330,17 @@ interface SidebarProps {
   onDeleteTeam: (id: string) => void;
   onMapUpload: (url: string | null) => void;
   zones: Zone[];
+  interventions?: Intervention[];
   mode: 'reader' | 'deployment' | 'edition';
   onDeleteZone: (id: string) => void;
   onUpdateZone: (id: string, updates: Partial<Zone>) => void;
   onUpdateDescription: (id: string, description: string | null) => void;
   onAddZone: (zone: Omit<Zone, 'id' | 'map_id' | 'created_at'>) => void;
   onTeamsMove?: (moves: { id: string; x: number; y: number }[]) => void;
+  onAddIntervention?: (description: string, priority: string, posX?: number, posY?: number) => Promise<Intervention | null>;
+  onUpdateIntervention?: (id: string, updates: Partial<Intervention>) => Promise<void>;
+  onDeleteIntervention?: (id: string) => Promise<void>;
+  onFlushInterventions?: () => Promise<void>;
 }
 
 export const Sidebar = memo(function Sidebar({ 
@@ -267,17 +352,28 @@ export const Sidebar = memo(function Sidebar({
   onDeleteTeam, 
   onMapUpload,
   zones,
+  interventions = [],
   mode,
   onDeleteZone,
   onUpdateZone,
   onUpdateDescription,
   onAddZone,
-  onTeamsMove
+  onTeamsMove,
+  onAddIntervention,
+  onDeleteIntervention,
+  onFlushInterventions
 }: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
   const [uploading, setUploading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => setTick(t => t + 1), 15000);
+    return () => clearInterval(interval);
+  }, []);
+
   const [isCompact, setIsCompact] = useState(() => {
     try {
       return localStorage.getItem('squad_map_sidebar_compact') === 'true';
@@ -832,6 +928,30 @@ export const Sidebar = memo(function Sidebar({
             );
           })}
         </div>
+
+        {/* Section Administration des Interventions */}
+        <div className="flex flex-col gap-3 glass-card p-4 rounded-2xl border border-red-500/10 bg-red-950/5 mt-4">
+          <div className="text-xs font-bold uppercase tracking-wider text-red-400 mb-1 font-display">
+            Administration des Interventions
+          </div>
+          <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+            Cette action supprimera définitivement tout l'historique des interventions et réinitialisera le compteur à 0.
+          </p>
+          {onFlushInterventions && (
+            <button
+              type="button"
+              onClick={() => {
+                if (confirm("⚠️ ATTENTION : Voulez-vous vraiment supprimer toutes les interventions et réinitialiser le compteur ? Cette action est irréversible.")) {
+                  onFlushInterventions();
+                }
+              }}
+              className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-600 hover:text-white border border-red-500/20 p-2.5 rounded-xl text-xs font-bold text-red-400 transition-all cursor-pointer shadow-sm shadow-red-950/30"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Vider l'historique des interventions
+            </button>
+          )}
+        </div>
       </div>
       )}
 
@@ -870,6 +990,111 @@ export const Sidebar = memo(function Sidebar({
         ))}
       </div>
       )}
+
+      {/* Liste Interventions - Visible en mode déploiement ou en mode lecteur */}
+      {(mode === 'deployment' || mode === 'reader') && (
+        <div className="flex flex-col gap-3 mt-4 border-t border-white/5 pt-4">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex justify-between items-center font-display w-full">
+            <span>Interventions en cours ({interventions.length})</span>
+          </div>
+
+          {mode === 'deployment' && onAddIntervention && (
+            <button
+              type="button"
+              onClick={() => onAddIntervention("Nouvelle Intervention", "P3", 50, 55)}
+              className="w-full py-2.5 px-4 rounded-xl border border-red-500/30 text-red-400 bg-red-500/10 hover:bg-red-500 hover:text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer mb-2"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Créer une intervention
+            </button>
+          )}
+          {interventions.length === 0 ? (
+            <div className="text-xs text-slate-500 bg-black/20 border border-white/5 rounded-xl p-4 text-center italic font-semibold leading-relaxed">
+              Aucune intervention en cours
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {interventions.map((intervention) => {
+                const assigned = teams.find(t => t.id === intervention.assigned_team_id);
+                
+                // Helper to get initials
+                const getTeamAbbrev = (name: string) => {
+                  const words = name.split(' ').filter(Boolean);
+                  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+                  return name.slice(0, 3).toUpperCase();
+                };
+
+                const calculateElapsed = () => {
+                  const diffMs = Date.now() - new Date(intervention.created_at).getTime();
+                  if (diffMs < 0) return '0m';
+                  const mins = Math.floor(diffMs / 60000);
+                  if (mins < 60) return `${mins}m`;
+                  return `${Math.floor(mins / 60)}h${(mins % 60).toString().padStart(2, '0')}`;
+                };
+
+                return (
+                  <div 
+                    key={intervention.id}
+                    className="flex flex-col gap-1.5 p-3 rounded-xl border border-white/5 bg-slate-950/25 text-slate-300 relative group/int hover:border-white/10 transition-colors shadow-sm"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {/* Priority Badge */}
+                        <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center text-white shrink-0 shadow-md ${
+                          intervention.priority === 'P0' ? 'bg-slate-950 border border-red-500 text-red-500 animate-pulse' :
+                          intervention.priority === 'P1' ? 'bg-red-600' :
+                          intervention.priority === 'P3' ? 'bg-amber-500' : 'bg-blue-500'
+                        }`}>
+                          {intervention.number}
+                        </span>
+                        <span className="text-xs font-bold text-slate-200 truncate leading-none">
+                          {intervention.description || `Intervention #${intervention.number}`}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Elapsed Timer */}
+                        <span className="text-[9px] font-bold text-slate-500 flex items-center gap-0.5">
+                          <Clock className="w-3 h-3 text-slate-500" />
+                          {calculateElapsed()}
+                        </span>
+                        {/* Assigned Team badge */}
+                        {assigned ? (
+                          <span 
+                            className="text-[9px] font-black px-2 py-0.5 rounded-full text-white border border-white/10 shadow-sm"
+                            style={{ backgroundColor: assigned.color }}
+                          >
+                            {getTeamAbbrev(assigned.name)}
+                          </span>
+                        ) : (
+                          <span className="text-[8px] bg-slate-800 border border-white/5 text-slate-500 font-bold px-2 py-0.5 rounded-full">
+                            Non assignée
+                          </span>
+                        )}
+                        {/* Delete button (resolve) */}
+                        {mode === 'deployment' && onDeleteIntervention && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (confirm(`Voulez-vous résoudre et clôturer l'intervention #${intervention.number} ?`)) {
+                                onDeleteIntervention(intervention.id);
+                              }
+                            }}
+                            className="text-slate-600 hover:text-red-400 p-0.5 rounded transition-colors cursor-pointer"
+                            title="Résoudre l'intervention"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
 
       <ConfirmDialog 
         isOpen={!!teamToDelete}

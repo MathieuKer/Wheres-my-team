@@ -19,6 +19,19 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
   // Utilisation de l'orchestrateur profond avec l'ID de la carte
   const { state, actions } = useSquadMap(mapId);
 
+  // États de configuration globaux (partagés entre la carte et le menu de création de la barre latérale)
+  const [configuringTeamId, setConfiguringTeamId] = useState<string | null>(null);
+  const [configuringInterventionId, setConfiguringInterventionId] = useState<string | null>(null);
+
+  // Wrapper pour ouvrir directement le modal lors de la création d'une intervention
+  const handleAddIntervention = async (description: string, priority: string, posX?: number, posY?: number) => {
+    const newInt = await actions.addIntervention(description, priority, posX, posY);
+    if (newInt) {
+      setConfiguringInterventionId(newInt.id);
+    }
+    return newInt;
+  };
+
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
@@ -83,12 +96,22 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           mapUrl={state.mapUrl}
           teams={state.teams}
           zones={state.zones}
+          interventions={state.interventions}
           mode={state.mode}
           onTeamsMove={actions.updateTeamsPositions}
           onTeamDoubleClick={actions.toggleIntervention}
+          onTeamUpdateStatus={actions.updateTeamStatus}
+          onTeamUpdateDescription={actions.updateTeamDescription}
           onZoneCreate={actions.addZone}
           onZoneUpdate={actions.updateZone}
           onZoneDelete={actions.deleteZone}
+          onInterventionAdd={handleAddIntervention}
+          onInterventionUpdate={actions.updateIntervention}
+          onInterventionDelete={actions.deleteIntervention}
+          configuringTeamId={configuringTeamId}
+          setConfiguringTeamId={setConfiguringTeamId}
+          configuringInterventionId={configuringInterventionId}
+          setConfiguringInterventionId={setConfiguringInterventionId}
         />
       </div>
 
@@ -190,6 +213,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
         <Sidebar 
           teams={state.teams}
           zones={state.zones}
+          interventions={state.interventions}
           mode={state.mode}
           onAddTeam={actions.addTeam}
           onUpdateColor={actions.updateTeamColor}
@@ -202,6 +226,10 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           onUpdateDescription={actions.updateTeamDescription}
           onAddZone={actions.addZone}
           onTeamsMove={actions.updateTeamsPositions}
+          onAddIntervention={handleAddIntervention}
+          onUpdateIntervention={actions.updateIntervention}
+          onDeleteIntervention={actions.deleteIntervention}
+          onFlushInterventions={actions.flushInterventions}
         />
 
         {state.mode === 'edition' && (

@@ -3,7 +3,8 @@ import useSWR, { mutate } from 'swr';
 import { teamsRepo } from '../lib/repositories/teams';
 import { mapRepo } from '../lib/repositories/map';
 import { zoneRepo } from '../lib/repositories/zones';
-import type { TeamStatus, Zone, SquadMap } from '../types';
+import { interventionsRepo } from '../lib/repositories/interventions';
+import type { TeamStatus, Zone, SquadMap, Intervention } from '../types';
 
 /**
  * Orchestrateur de domaine "SquadMap".
@@ -13,6 +14,7 @@ export function useSquadMap(mapId: string | null) {
   const { data: teams = [], isLoading: loadingTeams } = useSWR(mapId ? ['teams', mapId] : null, () => teamsRepo.getAll(mapId!));
   const { data: mapSettings, isLoading: loadingMap } = useSWR(mapId ? ['map', mapId] : null, () => mapRepo.getById(mapId!));
   const { data: zones = [], isLoading: loadingZones } = useSWR(mapId ? ['zones', mapId] : null, () => zoneRepo.getAll(mapId!));
+  const { data: interventions = [], isLoading: loadingInterventions } = useSWR(mapId ? ['interventions', mapId] : null, () => interventionsRepo.getAll(mapId!));
 
   const [isAdding, setIsAdding] = useState(false);
   const [mode, setMode] = useState<'reader' | 'deployment' | 'edition'>('reader');
@@ -24,8 +26,6 @@ export function useSquadMap(mapId: string | null) {
       mutate(['teams', mapId]);
     });
     
-    // We don't have a mapId specific subscribe on mapRepo yet, but we can subscribe to all and filter, 
-    // or just rely on the mapRepo.subscribe implementation. For now it listens to all maps.
     const unsubscribeMap = mapRepo.subscribe((payload) => {
       if (payload.new && (payload.new as SquadMap).id === mapId) {
         mutate(['map', mapId]);
@@ -35,11 +35,16 @@ export function useSquadMap(mapId: string | null) {
     const unsubscribeZones = zoneRepo.subscribe(mapId, () => {
       mutate(['zones', mapId]);
     });
+
+    const unsubscribeInterventions = interventionsRepo.subscribe(mapId, () => {
+      mutate(['interventions', mapId]);
+    });
     
     return () => {
       unsubscribeTeams();
       unsubscribeMap();
       unsubscribeZones();
+      unsubscribeInterventions();
     };
   }, [mapId]);
 
@@ -108,7 +113,9 @@ export function useSquadMap(mapId: string | null) {
   const flushAll = useCallback(async () => {
     if (!mapId) return;
     mutate(['teams', mapId], [], false);
+    mutate(['interventions', mapId], [], false);
     await teamsRepo.deleteAll(mapId);
+    await interventionsRepo.deleteAll(mapId);
   }, [mapId]);
 
   const toggleIntervention = useCallback((id: string, currentStatus: TeamStatus) => {
@@ -117,7 +124,7 @@ export function useSquadMap(mapId: string | null) {
   }, [updateTeamStatus]);
 
   const requestFlush = useCallback(() => {
-    if (globalThis.confirm("Êtes-vous sûr de vouloir supprimer toutes les équipes ? Cette action est irréversible.")) {
+    if (globalThis.confirm("Êtes-vous sûr de vouloir supprimer toutes les équipes et interventions ? Cette action est irréversible.")) {
       flushAll();
     }
   }, [flushAll]);
@@ -151,6 +158,66 @@ export function useSquadMap(mapId: string | null) {
     await zoneRepo.delete(id);
   }, [mapId, zones]);
 
+  // --- ACTIONS INTERVENTIONS ---
+  const addIntervention = useCallback(async (description: string, priority: string, posX = 50, posY = 50) => {
+    if (!mapId) return null;
+    const newInt = await interventionsRepo.create(mapId, description, priority, posX, posY);
+    mutate(['interventions', mapId]);
+    return newInt;
+  }, [mapId]);
+
+  const updateIntervention = useCallback(async (id: string, updates: Partial<Intervention>) => {
+    if (!mapId) return;
+
+    // Apply cascading auto-status updates if assigned_team_id changed
+    if ('assigned_team_id' in updates) {
+      const teamId = updates.assigned_team_id;
+      if (teamId) {
+        updates.status = 'assigned';
+        // Auto transition team status to 'en_route' if they were dispo or pause
+        const team = teams.find(t => t.id === teamId);
+        if (team && (team.status === 'dispo' || team.status === 'pause')) {
+          await updateTeamStatus(teamId, 'en_route');
+        }
+      } else {
+        updates.status = 'open';
+      }
+    }
+
+    mutate(['interventions', mapId], interventions.map(i => i.id === id ? { ...i, ...updates } : i), false);
+    await interventionsRepo.update(id, updates);
+    mutate(['interventions', mapId]);
+  }, [mapId, interventions, teams, updateTeamStatus]);
+
+  const deleteIntervention = useCallback(async (id: string) => {
+    if (!mapId) return;
+    
+    // Auto release assigned team to dispo
+    const intToClose = interventions.find(i => i.id === id);
+    if (intToClose?.assigned_team_id) {
+      await updateTeamStatus(intToClose.assigned_team_id, 'dispo');
+    }
+
+    mutate(['interventions', mapId], interventions.filter(i => i.id !== id), false);
+    await interventionsRepo.delete(id);
+  }, [mapId, interventions, updateTeamStatus]);
+
+  const flushInterventions = useCallback(async () => {
+    if (!mapId) return;
+
+    // Auto release all assigned teams to dispo
+    const assignedTeamIds = interventions
+      .filter(i => i.assigned_team_id !== null)
+      .map(i => i.assigned_team_id as string);
+
+    for (const teamId of assignedTeamIds) {
+      await updateTeamStatus(teamId, 'dispo');
+    }
+
+    mutate(['interventions', mapId], [], false);
+    await interventionsRepo.deleteAll(mapId);
+  }, [mapId, interventions, updateTeamStatus]);
+
   const memoizedActions = useMemo(() => ({
     addTeam,
     updateTeamPosition,
@@ -166,6 +233,10 @@ export function useSquadMap(mapId: string | null) {
     addZone,
     updateZone,
     deleteZone,
+    addIntervention,
+    updateIntervention,
+    deleteIntervention,
+    flushInterventions,
     setMode
   }), [
     addTeam,
@@ -182,6 +253,10 @@ export function useSquadMap(mapId: string | null) {
     addZone,
     updateZone,
     deleteZone,
+    addIntervention,
+    updateIntervention,
+    deleteIntervention,
+    flushInterventions,
     setMode
   ]);
 
@@ -189,9 +264,10 @@ export function useSquadMap(mapId: string | null) {
     state: {
       teams,
       zones,
+      interventions,
       mode,
       mapUrl: mapSettings?.image_url ?? null,
-      loading: loadingTeams || loadingMap || loadingZones
+      loading: loadingTeams || loadingMap || loadingZones || loadingInterventions
     },
     actions: memoizedActions
   };

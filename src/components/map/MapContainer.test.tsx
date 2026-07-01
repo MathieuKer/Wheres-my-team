@@ -21,6 +21,10 @@ describe('MapContainer Component', () => {
     onZoneCreate: vi.fn(),
     onZoneUpdate: vi.fn(),
     onZoneDelete: vi.fn(),
+    configuringTeamId: null,
+    setConfiguringTeamId: vi.fn(),
+    configuringInterventionId: null,
+    setConfiguringInterventionId: vi.fn(),
   };
 
   beforeAll(() => {
