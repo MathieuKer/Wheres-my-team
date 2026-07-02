@@ -171,9 +171,23 @@ export function useSquadMap(mapId: string | null) {
 
     // Apply cascading auto-status updates if assigned_team_id changed
     if ('assigned_team_id' in updates) {
+      const oldTeamId = interventions.find(i => i.id === id)?.assigned_team_id;
       const teamId = updates.assigned_team_id;
+
+      // Release the old team to 'dispo' if it was replaced or unassigned
+      if (oldTeamId && oldTeamId !== teamId) {
+        await updateTeamStatus(oldTeamId, 'dispo');
+      }
+
       if (teamId) {
         updates.status = 'assigned';
+
+        // Unassign this team from any other intervention first to prevent dual assignment
+        const otherInts = interventions.filter(i => i.assigned_team_id === teamId && i.id !== id);
+        for (const otherInt of otherInts) {
+          await interventionsRepo.update(otherInt.id, { assigned_team_id: null, status: 'open' });
+        }
+
         // Auto transition team status to 'en_route' if they were dispo or pause
         const team = teams.find(t => t.id === teamId);
         if (team && (team.status === 'dispo' || team.status === 'pause')) {
@@ -184,7 +198,19 @@ export function useSquadMap(mapId: string | null) {
       }
     }
 
-    mutate(['interventions', mapId], interventions.map(i => i.id === id ? { ...i, ...updates } : i), false);
+    mutate(
+      ['interventions', mapId],
+      interventions.map(i => {
+        if (i.id === id) {
+          return { ...i, ...updates };
+        }
+        if (updates.assigned_team_id && i.assigned_team_id === updates.assigned_team_id && i.id !== id) {
+          return { ...i, assigned_team_id: null, status: 'open' };
+        }
+        return i;
+      }),
+      false
+    );
     await interventionsRepo.update(id, updates);
     mutate(['interventions', mapId]);
   }, [mapId, interventions, teams, updateTeamStatus]);
@@ -218,6 +244,21 @@ export function useSquadMap(mapId: string | null) {
     await interventionsRepo.deleteAll(mapId);
   }, [mapId, interventions, updateTeamStatus]);
 
+  const updateInterventionsPositions = useCallback(async (moves: { id: string; x: number; y: number }[]) => {
+    if (!mapId || moves.length === 0) return;
+    const moveMap = new Map(moves.map(m => [m.id, m]));
+    mutate(
+      ['interventions', mapId], 
+      interventions.map(i => {
+        const move = moveMap.get(i.id);
+        return move ? { ...i, pos_x: move.x, pos_y: move.y } : i;
+      }), 
+      false
+    );
+    await Promise.all(moves.map(m => interventionsRepo.update(m.id, { pos_x: m.x, pos_y: m.y })));
+    mutate(['interventions', mapId]);
+  }, [mapId, interventions]);
+
   const memoizedActions = useMemo(() => ({
     addTeam,
     updateTeamPosition,
@@ -237,6 +278,7 @@ export function useSquadMap(mapId: string | null) {
     updateIntervention,
     deleteIntervention,
     flushInterventions,
+    updateInterventionsPositions,
     setMode
   }), [
     addTeam,
@@ -257,6 +299,7 @@ export function useSquadMap(mapId: string | null) {
     updateIntervention,
     deleteIntervention,
     flushInterventions,
+    updateInterventionsPositions,
     setMode
   ]);
 

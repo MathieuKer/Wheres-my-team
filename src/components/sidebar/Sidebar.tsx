@@ -341,6 +341,7 @@ interface SidebarProps {
   onUpdateIntervention?: (id: string, updates: Partial<Intervention>) => Promise<void>;
   onDeleteIntervention?: (id: string) => Promise<void>;
   onFlushInterventions?: () => Promise<void>;
+  onConfigureIntervention?: (id: string) => void;
 }
 
 export const Sidebar = memo(function Sidebar({ 
@@ -361,7 +362,8 @@ export const Sidebar = memo(function Sidebar({
   onTeamsMove,
   onAddIntervention,
   onDeleteIntervention,
-  onFlushInterventions
+  onFlushInterventions,
+  onConfigureIntervention
 }: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
@@ -1035,7 +1037,8 @@ export const Sidebar = memo(function Sidebar({
                 return (
                   <div 
                     key={intervention.id}
-                    className="flex flex-col gap-1.5 p-3 rounded-xl border border-white/5 bg-slate-950/25 text-slate-300 relative group/int hover:border-white/10 transition-colors shadow-sm"
+                    onClick={() => onConfigureIntervention?.(intervention.id)}
+                    className="flex flex-col gap-1.5 p-3 rounded-xl border border-white/5 bg-slate-950/25 text-slate-300 relative group/int hover:border-white/10 hover:bg-slate-950/40 transition-all shadow-sm cursor-pointer"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 min-w-0">
@@ -1074,7 +1077,8 @@ export const Sidebar = memo(function Sidebar({
                         {mode === 'deployment' && onDeleteIntervention && (
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               if (confirm(`Voulez-vous résoudre et clôturer l'intervention #${intervention.number} ?`)) {
                                 onDeleteIntervention(intervention.id);
                               }

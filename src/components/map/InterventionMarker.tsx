@@ -13,6 +13,7 @@ interface InterventionMarkerProps {
   mode?: 'reader' | 'deployment' | 'edition';
   onConfigure: () => void;
   isSelected?: boolean;
+  isDropTarget?: boolean;
 }
 
 const calculateElapsed = (createdAtStr: string) => {
@@ -36,7 +37,8 @@ export const InterventionMarker = memo(function InterventionMarker({
   zoomScale = 1,
   mode = 'reader',
   onConfigure,
-  isSelected = false
+  isSelected = false,
+  isDropTarget = false
 }: Readonly<InterventionMarkerProps>) {
   const [elapsed, setElapsed] = useState(() => calculateElapsed(intervention.created_at));
 
@@ -143,6 +145,10 @@ export const InterventionMarker = memo(function InterventionMarker({
     >
       {/* Hexagon Shape */}
       <div className={`w-7 h-7 flex items-center justify-center relative transition-transform duration-300 hover:scale-110 active:scale-95 ${intervention.priority === 'P0' ? 'animate-pulse' : ''}`}>
+        {/* Drop target pulsing halo */}
+        {isDropTarget && (
+          <div className="absolute -inset-2.5 rounded-full border border-blue-400 bg-blue-400/20 animate-pulse pointer-events-none z-0 shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+        )}
         {/* Selected Indicator Outline ring */}
         {isSelected && (
           <div className="absolute -inset-1.5 rounded-full border border-dashed border-blue-400 animate-[spin_10s_linear_infinite] pointer-events-none z-0" />
