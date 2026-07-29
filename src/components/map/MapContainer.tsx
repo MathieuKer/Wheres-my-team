@@ -14,6 +14,7 @@ interface MapContainerProps {
   teams: Team[];
   zones: Zone[];
   interventions?: Intervention[];
+  hasInterventions?: boolean;
   mode: 'reader' | 'deployment' | 'edition';
   onTeamsMove: (moves: { id: string; x: number; y: number }[]) => void;
   onTeamDoubleClick: (id: string, currentStatus: TeamStatus) => void;
@@ -500,6 +501,7 @@ export function MapContainer({
   teams, 
   zones, 
   interventions = [],
+  hasInterventions = true,
   mode, 
   onTeamsMove, 
   onTeamDoubleClick,
@@ -678,7 +680,7 @@ export function MapContainer({
   };
 
   const handleMapDoubleClick = async (e: React.MouseEvent) => {
-    if (mode !== 'deployment') return;
+    if (mode !== 'deployment' || !hasInterventions) return;
 
     // Ignore double click if on marker or zone element
     if ((e.target as HTMLElement).closest('.nodrag') || (e.target as HTMLElement).closest('.zone-element')) {
@@ -1027,7 +1029,7 @@ export function MapContainer({
             })}
 
             {/* Interventions Markers */}
-            {showInterventions && (mode === 'deployment' || mode === 'reader') && interventions.map(intervention => {
+            {hasInterventions && showInterventions && (mode === 'deployment' || mode === 'reader') && interventions.map(intervention => {
               let x = intervention.pos_x;
               let y = intervention.pos_y;
               
@@ -1088,18 +1090,20 @@ export function MapContainer({
         >
           <Maximize className="w-5 h-5" />
         </button>
-        <button
-          type="button"
-          onClick={() => setShowInterventions(prev => !prev)}
-          className={`p-2.5 rounded-xl transition-all border ${
-            showInterventions
-              ? 'bg-white/5 border-white/5 text-slate-300 hover:text-white hover:bg-white/10'
-              : 'bg-red-500/20 border-red-500/30 text-red-400'
-          }`}
-          title={showInterventions ? "Masquer les interventions" : "Afficher les interventions"}
-        >
-          {showInterventions ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
-        </button>
+        {hasInterventions && (
+          <button
+            type="button"
+            onClick={() => setShowInterventions(prev => !prev)}
+            className={`p-2.5 rounded-xl transition-all border ${
+              showInterventions
+                ? 'bg-white/5 border-white/5 text-slate-300 hover:text-white hover:bg-white/10'
+                : 'bg-red-500/20 border-red-500/30 text-red-400'
+            }`}
+            title={showInterventions ? "Masquer les interventions" : "Afficher les interventions"}
+          >
+            {showInterventions ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+          </button>
+        )}
         <div className="h-px bg-white/10 my-1" />
         <button
           type="button"
@@ -1169,35 +1173,43 @@ export function MapContainer({
             </div>
 
             {/* Priorités Interventions */}
-            <div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Priorités Interventions</div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 bg-slate-950 border border-red-500 rounded flex items-center justify-center text-[7px] text-red-500 font-black animate-pulse">P0</span>
-                  <span className="text-[11px] text-slate-300">Urgence P0</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 bg-red-600 border border-red-500 rounded flex items-center justify-center text-[7px] text-white font-black">P1</span>
-                  <span className="text-[11px] text-slate-300">Grave P1</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 bg-amber-500 border border-amber-400 rounded flex items-center justify-center text-[7px] text-slate-950 font-black">P3</span>
-                  <span className="text-[11px] text-slate-300">Moyenne P3</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-3.5 h-3.5 bg-blue-500 border border-blue-400 rounded flex items-center justify-center text-[7px] text-white font-black">P5</span>
-                  <span className="text-[11px] text-slate-300">Faible P5</span>
+            {hasInterventions && (
+              <div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Priorités Interventions</div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3.5 h-3.5 bg-slate-950 border border-red-500 rounded flex items-center justify-center text-[7px] text-red-500 font-black animate-pulse">P0</span>
+                    <span className="text-[11px] text-slate-300">Urgence P0</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3.5 h-3.5 bg-red-600 border border-red-500 rounded flex items-center justify-center text-[7px] text-white font-black">P1</span>
+                    <span className="text-[11px] text-slate-300">Grave P1</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3.5 h-3.5 bg-amber-500 border border-amber-400 rounded flex items-center justify-center text-[7px] text-slate-950 font-black">P3</span>
+                    <span className="text-[11px] text-slate-300">Moyenne P3</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3.5 h-3.5 bg-blue-500 border border-blue-400 rounded flex items-center justify-center text-[7px] text-white font-black">P5</span>
+                    <span className="text-[11px] text-slate-300">Faible P5</span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Raccourcis et Gestes */}
             <div className="border-t border-white/5 pt-2.5">
               <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Raccourcis & Astuces</div>
               <ul className="space-y-1.5 text-[11px] text-slate-300 list-disc list-inside">
-                <li><span className="font-bold text-white">Double-clic (vide)</span> : Créer intervention</li>
-                <li><span className="font-bold text-white">Double-clic (unité)</span> : Créer intervention sur l'unité</li>
-                <li><span className="font-bold text-white">Glisser équipe sur intervention</span> : Assigner</li>
+                {hasInterventions ? (
+                  <>
+                    <li><span className="font-bold text-white">Double-clic (vide)</span> : Créer intervention</li>
+                    <li><span className="font-bold text-white">Double-clic (unité)</span> : Créer intervention sur l'unité</li>
+                    <li><span className="font-bold text-white">Glisser équipe sur intervention</span> : Assigner</li>
+                  </>
+                ) : (
+                  <li><span className="font-bold text-white">Double-clic (unité)</span> : Basculer le statut (Intervention / Dispo)</li>
+                )}
                 <li><span className="font-bold text-white">Lasso</span> : Sélectionner les équipes</li>
                 <li><span className="font-bold text-white">Lasso + Ctrl / Cmd</span> : Sélectionner tout</li>
                 <li><span className="font-bold text-white">Échap ou Ctrl/Cmd + Entrée</span> : Valider et fermer le modal</li>

@@ -331,6 +331,7 @@ interface SidebarProps {
   onMapUpload: (url: string | null) => void;
   zones: Zone[];
   interventions?: Intervention[];
+  hasInterventions?: boolean;
   mode: 'reader' | 'deployment' | 'edition';
   onDeleteZone: (id: string) => void;
   onUpdateZone: (id: string, updates: Partial<Zone>) => void;
@@ -354,6 +355,7 @@ export const Sidebar = memo(function Sidebar({
   onMapUpload,
   zones,
   interventions = [],
+  hasInterventions = true,
   mode,
   onDeleteZone,
   onUpdateZone,
@@ -932,28 +934,30 @@ export const Sidebar = memo(function Sidebar({
         </div>
 
         {/* Section Administration des Interventions */}
-        <div className="flex flex-col gap-3 glass-card p-4 rounded-2xl border border-red-500/10 bg-red-950/5 mt-4">
-          <div className="text-xs font-bold uppercase tracking-wider text-red-400 mb-1 font-display">
-            Administration des Interventions
+        {hasInterventions && (
+          <div className="flex flex-col gap-3 glass-card p-4 rounded-2xl border border-red-500/10 bg-red-950/5 mt-4">
+            <div className="text-xs font-bold uppercase tracking-wider text-red-400 mb-1 font-display">
+              Administration des Interventions
+            </div>
+            <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+              Cette action supprimera définitivement tout l'historique des interventions et réinitialisera le compteur à 0.
+            </p>
+            {onFlushInterventions && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (confirm("⚠️ ATTENTION : Voulez-vous vraiment supprimer toutes les interventions et réinitialiser le compteur ? Cette action est irréversible.")) {
+                    onFlushInterventions();
+                  }
+                }}
+                className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-600 hover:text-white border border-red-500/20 p-2.5 rounded-xl text-xs font-bold text-red-400 transition-all cursor-pointer shadow-sm shadow-red-950/30"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Vider l'historique des interventions
+              </button>
+            )}
           </div>
-          <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
-            Cette action supprimera définitivement tout l'historique des interventions et réinitialisera le compteur à 0.
-          </p>
-          {onFlushInterventions && (
-            <button
-              type="button"
-              onClick={() => {
-                if (confirm("⚠️ ATTENTION : Voulez-vous vraiment supprimer toutes les interventions et réinitialiser le compteur ? Cette action est irréversible.")) {
-                  onFlushInterventions();
-                }
-              }}
-              className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-600 hover:text-white border border-red-500/20 p-2.5 rounded-xl text-xs font-bold text-red-400 transition-all cursor-pointer shadow-sm shadow-red-950/30"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              Vider l'historique des interventions
-            </button>
-          )}
-        </div>
+        )}
       </div>
       )}
 
@@ -994,7 +998,7 @@ export const Sidebar = memo(function Sidebar({
       )}
 
       {/* Liste Interventions - Visible en mode déploiement ou en mode lecteur */}
-      {(mode === 'deployment' || mode === 'reader') && (
+      {hasInterventions && (mode === 'deployment' || mode === 'reader') && (
         <div className="flex flex-col gap-3 mt-4 border-t border-white/5 pt-4">
           <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex justify-between items-center font-display w-full">
             <span>Interventions en cours ({interventions.length})</span>

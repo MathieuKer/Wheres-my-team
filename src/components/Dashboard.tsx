@@ -103,12 +103,18 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           teams={state.teams}
           zones={state.zones}
           interventions={state.interventions}
+          hasInterventions={state.hasInterventions}
           mode={state.mode}
           onTeamsMove={actions.updateTeamsPositions}
           onTeamDoubleClick={async (teamId) => {
             if (state.mode !== 'deployment') return;
             const team = state.teams.find(t => t.id === teamId);
             if (!team) return;
+
+            if (!state.hasInterventions) {
+              actions.toggleIntervention(teamId, team.status);
+              return;
+            }
 
             const runCreation = async () => {
               const newInt = await handleAddIntervention("Nouvelle Intervention", "P3", team.pos_x, team.pos_y);
@@ -248,6 +254,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           teams={state.teams}
           zones={state.zones}
           interventions={state.interventions}
+          hasInterventions={state.hasInterventions}
           mode={state.mode}
           onAddTeam={actions.addTeam}
           onUpdateColor={actions.updateTeamColor}

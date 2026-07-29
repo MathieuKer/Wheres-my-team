@@ -148,4 +148,35 @@ describe('MapContainer Component', () => {
     expect(screen.getByText("Valider les changements")).toBeInTheDocument();
     expect(screen.getByText("Terminer l'intervention")).toBeInTheDocument();
   });
+
+  it('hides intervention toggle button and markers when hasInterventions is false', async () => {
+    const mockInterventions = [
+      {
+        id: 'int1',
+        map_id: 'm1',
+        number: 1,
+        description: 'Malaise vagal',
+        priority: 'P1' as const,
+        status: 'open' as const,
+        pos_x: 50,
+        pos_y: 50,
+        assigned_team_id: null,
+        created_at: new Date().toISOString()
+      }
+    ];
+
+    await act(async () => {
+      renderWithProviders(
+        <MapContainer 
+          {...mockProps} 
+          interventions={mockInterventions} 
+          hasInterventions={false} 
+          mode="deployment" 
+        />
+      );
+    });
+
+    expect(screen.queryByTitle("Masquer les interventions")).not.toBeInTheDocument();
+    expect(screen.queryByText('#1')).not.toBeInTheDocument();
+  });
 });

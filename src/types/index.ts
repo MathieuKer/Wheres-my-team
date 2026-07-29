@@ -17,6 +17,7 @@ export interface SquadMap {
   name: string;
   owner_id: string;
   image_url: string | null;
+  has_interventions?: boolean;
   created_at: string;
 }
 

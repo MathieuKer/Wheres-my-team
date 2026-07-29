@@ -14,6 +14,7 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [newMapName, setNewMapName] = useState('');
+  const [hasInterventions, setHasInterventions] = useState(true);
   const [mapToDelete, setMapToDelete] = useState<SquadMap | null>(null);
 
   useEffect(() => {
@@ -40,8 +41,9 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
     if (!newMapName.trim() || isCreating) return;
     setIsCreating(true);
     try {
-      await mapRepo.create(newMapName.trim());
+      await mapRepo.create(newMapName.trim(), hasInterventions);
       setNewMapName('');
+      setHasInterventions(true);
     } catch (err) {
       console.error(err);
       alert("Erreur lors de la création de la carte.");
@@ -100,6 +102,15 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
               placeholder="Nom de l'événement..."
               className="bg-black/20 border border-white/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 text-white w-full"
             />
+            <label className="flex items-center gap-2.5 text-xs text-slate-300 cursor-pointer select-none py-1">
+              <input 
+                type="checkbox"
+                checked={hasInterventions}
+                onChange={(e) => setHasInterventions(e.target.checked)}
+                className="rounded border-white/20 bg-black/40 text-blue-600 focus:ring-blue-500/30 w-4 h-4 cursor-pointer"
+              />
+              <span>Gestion des interventions</span>
+            </label>
             <button 
               type="submit"
               disabled={isCreating || !newMapName.trim()}
@@ -141,7 +152,12 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
                 className="p-5 bg-slate-900 backdrop-blur-md relative cursor-pointer border-t border-white/5 text-left w-full border-none"
                 onClick={() => onSelectMap(map.id)}
               >
-                <h3 className="text-white font-bold font-display text-lg truncate pr-12">{map.name}</h3>
+                <div className="flex items-center justify-between gap-2 pr-8">
+                  <h3 className="text-white font-bold font-display text-lg truncate">{map.name}</h3>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border shrink-0 ${map.has_interventions !== false ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-500/20'}`}>
+                    {map.has_interventions !== false ? 'Avec inters' : 'Sans inter'}
+                  </span>
+                </div>
                 <p className="text-slate-400 text-xs mt-1">Créée le {new Date(map.created_at).toLocaleDateString()}</p>
               </button>
             </div>

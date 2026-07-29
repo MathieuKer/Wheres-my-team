@@ -310,6 +310,7 @@ export function useSquadMap(mapId: string | null) {
       interventions,
       mode,
       mapUrl: mapSettings?.image_url ?? null,
+      hasInterventions: mapSettings?.has_interventions ?? true,
       loading: loadingTeams || loadingMap || loadingZones || loadingInterventions
     },
     actions: memoizedActions

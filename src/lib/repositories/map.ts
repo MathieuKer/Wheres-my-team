@@ -5,7 +5,7 @@ import type { RealtimePostgresChangesPayload } from '@supabase/supabase-js';
 export interface MapRepository {
   getAll(): Promise<SquadMap[]>;
   getById(id: string): Promise<SquadMap>;
-  create(name: string): Promise<SquadMap>;
+  create(name: string, has_interventions?: boolean): Promise<SquadMap>;
   update(id: string, updates: Partial<SquadMap>): Promise<void>;
   delete(id: string): Promise<void>;
   subscribe(callback: (payload: RealtimePostgresChangesPayload<SquadMap>) => void): () => void;
@@ -31,7 +31,7 @@ export const supabaseMapRepository: MapRepository = {
     return data;
   },
 
-  async create(name) {
+  async create(name, has_interventions = true) {
     // RLS will automatically set owner_id if we do it via a function, but here we let the DB handle it if possible, 
     // OR we must supply owner_id. Let's retrieve user id.
     const { data: { user } } = await supabase.auth.getUser();
@@ -39,7 +39,7 @@ export const supabaseMapRepository: MapRepository = {
 
     const { data, error } = await supabase
       .from('maps')
-      .insert([{ name, owner_id: user.id }])
+      .insert([{ name, owner_id: user.id, has_interventions }])
       .select()
       .single();
     if (error) throw error;

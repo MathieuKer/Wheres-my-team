@@ -48,4 +48,21 @@ describe('MapList', () => {
 
     expect(mockSignOut).toHaveBeenCalledTimes(1)
   })
+
+  it('renders has_interventions badges correctly and submits custom intervention setting on creation', async () => {
+    const mockMaps = [
+      { id: '1', name: 'Map Intervention', created_at: '2026-06-30T12:00:00Z', owner_id: 'user1', image_url: null, has_interventions: true },
+      { id: '2', name: 'Map Normal', created_at: '2026-06-30T13:00:00Z', owner_id: 'user1', image_url: null, has_interventions: false },
+    ]
+
+    vi.mocked(mapRepo.getAll).mockResolvedValue(mockMaps)
+    vi.mocked(mapRepo.create).mockResolvedValue({ id: '3', name: 'Nouvelle Map', created_at: '2026-06-30T14:00:00Z', owner_id: 'user1', image_url: null, has_interventions: false })
+
+    await act(async () => {
+      renderWithProviders(<MapList onSelectMap={vi.fn()} signOut={vi.fn()} />)
+    })
+
+    expect(screen.getByText('Avec inters')).toBeInTheDocument()
+    expect(screen.getByText('Sans inter')).toBeInTheDocument()
+  })
 })

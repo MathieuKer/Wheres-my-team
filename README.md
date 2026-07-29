@@ -54,12 +54,15 @@ CREATE TABLE public.teams (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
--- 2. Table pour la carte globale
-CREATE TABLE public.map_settings (
-  id INTEGER PRIMARY KEY CHECK (id = 1),
-  image_url TEXT
+-- 2. Table pour les cartes (maps)
+CREATE TABLE public.maps (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name TEXT NOT NULL,
+  owner_id UUID NOT NULL,
+  image_url TEXT,
+  has_interventions BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
-INSERT INTO public.map_settings (id, image_url) VALUES (1, null) ON CONFLICT DO NOTHING;
 
 -- 3. Activation du Temps Réel
 BEGIN;

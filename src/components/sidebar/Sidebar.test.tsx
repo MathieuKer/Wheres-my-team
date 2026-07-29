@@ -134,4 +134,13 @@ describe('Sidebar Component', () => {
     expect(mockProps.onTeamsMove).toHaveBeenCalledWith([{ id: 't1', x: 50, y: 50 }]);
     confirmSpy.mockRestore();
   });
+
+  it('hides intervention management and list sections when hasInterventions is false', async () => {
+    await act(async () => {
+      renderWithProviders(<Sidebar {...mockProps} mode="deployment" hasInterventions={false} />);
+    });
+
+    expect(screen.queryByText('Administration des Interventions')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Interventions en cours/)).not.toBeInTheDocument();
+  });
 });
