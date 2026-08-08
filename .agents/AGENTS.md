@@ -1,7 +1,7 @@
 # Workspace Rules - Wheres-my-team
 
 ## Vibe Coding Instructions
-You must strictly follow the rules defined in [GEMINI.md](file:///Users/mkeromnes/Desktop/source/Wheres-my-team/GEMINI.md).
+You must strictly follow the rules defined in [GEMINI.md](file:///Users/mkeromnes/repos/Wheres-my-team/GEMINI.md).
 
 1. **Plan Mode First**: Before executing any code changes or running modifying commands, analyze the codebase, list your assumptions, outline proposed changes, and write an implementation plan. Wait for explicit approval from the user.
 2. **Lean & Concise Code**: Avoid over-engineering, write clear, readable, and concise TypeScript/React code. Follow patterns from existing successful components in the repository.
@@ -22,8 +22,9 @@ You must strictly follow the rules defined in [GEMINI.md](file:///Users/mkeromne
 - **Actions d'Administration** : Les actions lourdes ("Changer le plan", "Flush Événement") doivent être réservées et affichées uniquement en mode **Plan** (édition).
 - **Mode Lecteur strict** : En mode `'reader'`, tous les inputs modifiables d'équipes (noms) doivent être rendus en texte statique (`<span>`), les éditeurs de notes doivent être bloqués, et les color pickers, boutons de recentrage et suppressions doivent être complètement masqués.
 
-## Standards de Tests Headless
+## Standards de Tests Headless & CI/CD
 - **Mock de variables globales** : Dans les suites de tests Vitest / JSDOM, mockez systématiquement les API globales absentes ou défaillantes comme `localStorage` (avec stubGlobal) et `ResizeObserver` (avec mock de classe) pour éviter les crashs à la compilation ou au montage.
+- **CI/CD GitHub Actions** : Le pipeline automatisé (`.github/workflows/ci.yml`) valide tout commit et toute pull request sur `main` en exécutant `npm run verify`.
 
 ## Optimisations de Déploiement Netlify
 - **Mise en cache immuable** : Dans `netlify.toml`, configurez toujours les en-têtes des éléments compilés sous `/assets/*` avec `public, max-age=31536000, immutable`. Les assets étant hashés par Vite, cela permet de réduire à zéro le coût de bande passante pour les utilisateurs récurrents.
