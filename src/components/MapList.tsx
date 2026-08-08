@@ -83,6 +83,7 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
             </div>
           </div>
           <button 
+            type="button"
             onClick={signOut}
             className="flex items-center gap-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 px-4 py-2 rounded-xl transition-all"
           >
@@ -125,6 +126,7 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
           {maps.map(map => (
             <div key={map.id} className="glass-card rounded-3xl overflow-hidden flex flex-col min-h-[220px] group relative transition-all hover:shadow-2xl hover:shadow-blue-900/20">
               <button 
+                type="button"
                 onClick={() => setMapToDelete(map)}
                 className="absolute top-4 right-4 z-10 p-2.5 bg-black/40 hover:bg-red-500 text-white rounded-xl opacity-0 group-hover:opacity-100 transition-all backdrop-blur-md"
                 title="Supprimer la carte"

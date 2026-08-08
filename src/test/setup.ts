@@ -8,18 +8,19 @@ vi.mock('../lib/supabase', () => {
     getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: 'https://example.com/mocked.png' } }),
   }
 
-  const mockQueryBuilder = {
-    select: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    update: vi.fn().mockReturnThis(),
-    delete: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    order: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: null, error: null }),
-    then: vi.fn((onfulfilled) => {
-      return Promise.resolve({ data: [], error: null }).then(onfulfilled)
-    }),
-  }
+  const createMockQueryBuilder = () => {
+    const result = { data: [], error: null };
+    const promise = Promise.resolve(result);
+    return {
+      select: vi.fn().mockReturnValue(promise),
+      insert: vi.fn().mockReturnValue(promise),
+      update: vi.fn().mockReturnValue(promise),
+      delete: vi.fn().mockReturnValue(promise),
+      eq: vi.fn().mockReturnValue(promise),
+      order: vi.fn().mockReturnValue(promise),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
+    };
+  };
 
   const mockSupabase = {
     auth: {
@@ -31,7 +32,7 @@ vi.mock('../lib/supabase', () => {
       signOut: vi.fn().mockResolvedValue({ error: null }),
       signInWithPassword: vi.fn().mockResolvedValue({ data: { session: {} }, error: null }),
     },
-    from: vi.fn().mockReturnValue(mockQueryBuilder),
+    from: vi.fn().mockImplementation(() => createMockQueryBuilder()),
     storage: {
       from: vi.fn().mockReturnValue(mockStorageBucket),
     },

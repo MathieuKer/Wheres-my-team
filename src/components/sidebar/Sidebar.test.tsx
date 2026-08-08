@@ -77,10 +77,10 @@ describe('Sidebar Component', () => {
 
     // Verify presence of interactive reset and delete buttons
     const resetBtns = screen.getAllByTitle("Recentrer l'unité");
-    expect(resetBtns.length).toBe(2);
+    expect(resetBtns).toHaveLength(2);
 
     const deleteBtns = screen.getAllByLabelText("Supprimer l'équipe");
-    expect(deleteBtns.length).toBe(2);
+    expect(deleteBtns).toHaveLength(2);
   });
 
   it('renders map upload box in edition ("Plan") mode', async () => {
@@ -106,7 +106,7 @@ describe('Sidebar Component', () => {
     expect(textSpan.tagName).toBe('SPAN');
 
     // No input textboxes should exist in reader mode
-    expect(screen.queryAllByRole('textbox').length).toBe(0);
+    expect(screen.queryAllByRole('textbox')).toHaveLength(0);
 
     // Action buttons (Reset, Delete) should be hidden
     expect(screen.queryByTitle("Recentrer l'unité")).not.toBeInTheDocument();
