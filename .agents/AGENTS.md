@@ -3,14 +3,15 @@
 ## Vibe Coding Instructions
 You must strictly follow the rules defined in [GEMINI.md](file:///Users/mkeromnes/repos/Wheres-my-team/GEMINI.md).
 
-1. **Plan Mode First**: Before executing any code changes or running modifying commands, analyze the codebase, list your assumptions, outline proposed changes, and write an implementation plan. Wait for explicit approval from the user.
-2. **Lean & Concise Code**: Avoid over-engineering, write clear, readable, and concise TypeScript/React code. Follow patterns from existing successful components in the repository.
-3. **Automated Verification**: After any code changes, run the project's local verification suite:
+1. **Git Branching Strategy**: Never push directly to `main`. All work, refactoring, and SonarCloud fixes must be developed and pushed on the `dev` branch or feature/fix branches.
+2. **Plan Mode First**: Before executing any code changes or running modifying commands, analyze the codebase, list your assumptions, outline proposed changes, and write an implementation plan. Wait for explicit approval from the user.
+3. **Lean & Concise Code**: Avoid over-engineering, write clear, readable, and concise TypeScript/React code. Follow patterns from existing successful components in the repository.
+4. **Automated Verification**: After any code changes, run the project's local verification suite:
    ```bash
    npm run verify
    ```
    Fix any compilation, linting, or test failures immediately before concluding your task.
-4. **Off-Limits**: Do not add/remove npm dependencies without explicit user validation. Do not touch `tailwind.config.js` or `src/index.css` unless requested.
+5. **Off-Limits**: Do not add/remove npm dependencies without explicit user validation. Do not touch `tailwind.config.js` or `src/index.css` unless requested.
 
 ## Ergonomie & Directives Responsive (Mobile/Tablette)
 - **Affichage et masquage universel du Menu** : La barre latérale doit pouvoir être repliée/dépliée sur tous les écrans via le bouton Menu. Sur tablette et PC, fermer le menu doit complètement masquer le panneau (`md:hidden`), permettant à la carte de s'étendre en plein écran (100% de la largeur). Le menu commence ouvert par défaut sur PC/tablette et fermé sur mobile.
@@ -24,7 +25,7 @@ You must strictly follow the rules defined in [GEMINI.md](file:///Users/mkeromne
 
 ## Standards de Tests Headless & CI/CD
 - **Mock de variables globales** : Dans les suites de tests Vitest / JSDOM, mockez systématiquement les API globales absentes ou défaillantes comme `localStorage` (avec stubGlobal) et `ResizeObserver` (avec mock de classe) pour éviter les crashs à la compilation ou au montage.
-- **CI/CD GitHub Actions** : Le pipeline automatisé (`.github/workflows/ci.yml`) valide tout commit et toute pull request sur `main` en exécutant `npm run verify`.
+- **CI/CD GitHub Actions & SonarCloud** : Le pipeline automatisé (`.github/workflows/ci.yml`) valide tout commit sur `dev` et toute PR vers `main`.
 
 ## Optimisations de Déploiement Netlify
 - **Mise en cache immuable** : Dans `netlify.toml`, configurez toujours les en-têtes des éléments compilés sous `/assets/*` avec `public, max-age=31536000, immutable`. Les assets étant hashés par Vite, cela permet de réduire à zéro le coût de bande passante pour les utilisateurs récurrents.
