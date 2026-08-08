@@ -1,6 +1,7 @@
 import { useRef, useState, memo } from 'react';
 import type { Team } from '../../types';
 import { AlertTriangle, MapPin, Navigation } from 'lucide-react';
+import { getAbbreviation, handleMarkerDrag } from '../../lib/utils';
 
 interface TeamMarkerProps {
   team: Team;
@@ -19,12 +20,6 @@ function getZIndex(isHovered: boolean, isSelected: boolean, status: string): num
   if (isHovered) return 800;
   if (isSelected) return 500;
   return status === 'intervention' ? 50 : 10;
-}
-
-function getAbbrev(name: string): string {
-  const words = name.split(' ').filter(Boolean);
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-  return name.slice(0, 3).toUpperCase();
 }
 
 export const TeamMarker = memo(function TeamMarker({ 
@@ -88,47 +83,7 @@ export const TeamMarker = memo(function TeamMarker({
     }
     lastClickTimeRef.current = now;
 
-    const container = document.getElementById('map-bounds-container');
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
-
-    onDragStart(team.id);
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
-
-      const percentDx = (dx / rect.width) * 100;
-      const percentDy = (dy / rect.height) * 100;
-
-      onDragMove(team.id, percentDx, percentDy);
-    };
-
-    const onPointerUp = (upEvent: PointerEvent) => {
-      globalThis.removeEventListener('pointermove', onPointerMove);
-      globalThis.removeEventListener('pointerup', onPointerUp);
-      
-      const dx = upEvent.clientX - startX;
-      const dy = upEvent.clientY - startY;
-
-      const percentDx = (dx / rect.width) * 100;
-      const percentDy = (dy / rect.height) * 100;
-
-      onDragEnd(team.id, percentDx, percentDy);
-
-      // Open on tactile tap (touch pointer and did not move more than 5px)
-      const isTouch = upEvent.pointerType === 'touch';
-      const movedDistance = Math.hypot(dx, dy);
-      if (isTouch && movedDistance < 5) {
-        onConfigure();
-      }
-    };
-
-    globalThis.addEventListener('pointermove', onPointerMove);
-    globalThis.addEventListener('pointerup', onPointerUp);
+    handleMarkerDrag(e, team.id, onDragStart, onDragMove, onDragEnd, onConfigure);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -218,7 +173,7 @@ export const TeamMarker = memo(function TeamMarker({
           className={`absolute top-[85%] left-1/2 -translate-x-1/2 mt-0.5 text-[7px] md:text-[9px] font-black leading-none px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-lg whitespace-nowrap border pointer-events-none z-10 font-display transition-all ${badgeSelectionClass}`}
           style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}
         >
-          {getAbbrev(team.name)}
+          {getAbbreviation(team.name)}
         </div>
       </div>
     </div>

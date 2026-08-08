@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, memo } from 'react';
 import type { Intervention, Team } from '../../types';
 import { Clock } from 'lucide-react';
+import { getAbbreviation, handleMarkerDrag } from '../../lib/utils';
 
 interface InterventionMarkerProps {
   intervention: Intervention;
@@ -29,12 +30,6 @@ function calculateElapsed(createdAt: string): string {
 function getInterventionZIndex(priority: string, isSelected: boolean): number {
   if (priority === 'P0') return 80;
   return isSelected ? 75 : 70;
-}
-
-function getAbbrev(name: string): string {
-  const words = name.split(' ').filter(Boolean);
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-  return name.slice(0, 3).toUpperCase();
 }
 
 export const InterventionMarker = memo(function InterventionMarker({
@@ -100,47 +95,7 @@ export const InterventionMarker = memo(function InterventionMarker({
     }
     lastClickTimeRef.current = now;
 
-    const container = document.getElementById('map-bounds-container');
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
-
-    onDragStart(intervention.id);
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
-
-      const percentDx = (dx / rect.width) * 100;
-      const percentDy = (dy / rect.height) * 100;
-
-      onDragMove(intervention.id, percentDx, percentDy);
-    };
-
-    const onPointerUp = (upEvent: PointerEvent) => {
-      globalThis.removeEventListener('pointermove', onPointerMove);
-      globalThis.removeEventListener('pointerup', onPointerUp);
-
-      const dx = upEvent.clientX - startX;
-      const dy = upEvent.clientY - startY;
-
-      const percentDx = (dx / rect.width) * 100;
-      const percentDy = (dy / rect.height) * 100;
-
-      onDragEnd(intervention.id, percentDx, percentDy);
-
-      // Open on tactile tap (touch pointer and did not move more than 5px)
-      const isTouch = upEvent.pointerType === 'touch';
-      const movedDistance = Math.hypot(dx, dy);
-      if (isTouch && movedDistance < 5) {
-        onConfigure();
-      }
-    };
-
-    globalThis.addEventListener('pointermove', onPointerMove);
-    globalThis.addEventListener('pointerup', onPointerUp);
+    handleMarkerDrag(e, intervention.id, onDragStart, onDragMove, onDragEnd, onConfigure);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -192,7 +147,7 @@ export const InterventionMarker = memo(function InterventionMarker({
             style={{ backgroundColor: assignedTeam.color }}
             title={`Assigné à ${assignedTeam.name}`}
           >
-            {getAbbrev(assignedTeam.name)}
+            {getAbbreviation(assignedTeam.name)}
           </div>
         )}
       </div>
