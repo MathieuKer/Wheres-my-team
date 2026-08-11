@@ -2,6 +2,7 @@ import { useState, useReducer, useMemo, memo, useRef, useEffect } from 'react';
 import type { Team, TeamStatus, Zone, Intervention } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { parseZoneType } from '../../lib/utils';
+import { getNextTeamSuggestion, getTeamSuggestionsPool } from '../../lib/teamNaming';
 import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal, RotateCcw, Navigation, Clock, X, PlusCircle } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -401,57 +402,14 @@ export const Sidebar = memo(function Sidebar({
   const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState(-1);
   const [hasUserEdited, setHasUserEdited] = useState(false);
 
-  // Alphabet phonétique international (NATO)
-  const PHONETIC_ALPHABET = useMemo(() => [
-    'Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliett',
-    'Kilo', 'Lima', 'Mike', 'November', 'Oscar', 'Papa', 'Quebec', 'Romeo', 'Sierra', 'Tango',
-    'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yankee', 'Zulu'
-  ], []);
-
-  // Équipes volantes par défaut
-  const VOLANTES = useMemo(() => [
-    'Volante 1', 'Volante 2', 'Volante 3', 'Volante 4', 'Volante 5'
-  ], []);
-
   // Génération dynamique du pool de suggestions basé sur les équipes existantes
   const suggestionsPool = useMemo(() => {
-    const existingNames = new Set(teams.map(t => t.name.trim().toLowerCase()));
-    const pool: string[] = [];
-
-    // Noms phonétiques (avec incrémentation si déjà pris)
-    for (const base of PHONETIC_ALPHABET) {
-      if (existingNames.has(base.toLowerCase())) {
-        let num = 2;
-        while (existingNames.has(`${base.toLowerCase()} ${num}`)) {
-          num++;
-        }
-        pool.push(`${base} ${num}`);
-      } else {
-        pool.push(base);
-      }
-    }
-
-    // Volantes (avec incrémentation si déjà prises)
-    for (const v of VOLANTES) {
-      if (!existingNames.has(v.toLowerCase())) {
-        pool.push(v);
-      }
-    }
-
-    let vNum = 1;
-    while (existingNames.has(`volante ${vNum}`)) {
-      vNum++;
-    }
-    if (vNum > 5) {
-      pool.push(`Volante ${vNum}`);
-    }
-
-    return pool;
-  }, [teams, PHONETIC_ALPHABET, VOLANTES]);
+    return getTeamSuggestionsPool(teams);
+  }, [teams]);
 
   const nextDefaultSuggestion = useMemo(() => {
-    return suggestionsPool[0] || '';
-  }, [suggestionsPool]);
+    return getNextTeamSuggestion(teams);
+  }, [teams]);
 
   // Pré-remplit automatiquement le champ lorsqu'il n'a pas été modifié par l'utilisateur
   useEffect(() => {

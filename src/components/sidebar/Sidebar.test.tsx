@@ -143,4 +143,31 @@ describe('Sidebar Component', () => {
     expect(screen.queryByText('Administration des Interventions')).not.toBeInTheDocument();
     expect(screen.queryByText(/Interventions en cours/)).not.toBeInTheDocument();
   });
+
+  it('automatically suggests the next phonetic letter or numbered increment in deployment mode', async () => {
+    const singleAlphaTeam = [
+      { id: 't1', name: 'Alpha', color: '#3b82f6', status: 'dispo' as const, pos_x: 20, pos_y: 30, map_id: 'm1', updated_at: '', description: null }
+    ];
+
+    await act(async () => {
+      renderWithProviders(<Sidebar {...mockProps} teams={singleAlphaTeam} mode="deployment" />);
+    });
+
+    // After Alpha, next recommendation input value must be Bravo
+    const addTeamInput = screen.getByPlaceholderText('Ex: Unité Alpha…') as HTMLInputElement;
+    expect(addTeamInput.value).toBe('Bravo');
+  });
+
+  it('automatically increments numbered teams like Volante 1 to Volante 2', async () => {
+    const volanteTeam = [
+      { id: 't1', name: 'Volante 1', color: '#3b82f6', status: 'dispo' as const, pos_x: 20, pos_y: 30, map_id: 'm1', updated_at: '', description: null }
+    ];
+
+    await act(async () => {
+      renderWithProviders(<Sidebar {...mockProps} teams={volanteTeam} mode="deployment" />);
+    });
+
+    const addTeamInput = screen.getByPlaceholderText('Ex: Unité Alpha…') as HTMLInputElement;
+    expect(addTeamInput.value).toBe('Volante 2');
+  });
 });
