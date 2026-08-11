@@ -11,11 +11,28 @@
 
 ---
 
-## 🔀 Git Branching & Deployment Strategy (Mandatory)
-- 🚫 **Strict Protection of `main` (Production)** : Never push code changes directly to `main`.
-- 🌿 **Development Branch (`dev`)** : All bug fixes, refactoring, feature developments, and SonarCloud Quality Gate analyses must be executed on the `dev` branch (or feature/fix branches).
-- 🚦 **Merge Criteria & Explicit User Authorization** : Merging `dev` into `main` is executed by the agent ONLY upon explicit user request (e.g., "Merge vers main" / "Merge en prod"), and after automated verification (`npm run verify`), GitHub Actions CI success, and SonarCloud Quality Gate validation.
-- 📡 **Post-Merge SonarCloud Check** : Immediately after a merge to `main`, inspect SonarCloud API results on `main` to confirm production health.
+## 🔀 Workflow de Développement & Déploiement (Mandatoire)
+
+1. **Étape 1 : Dév & Tests locaux** :
+   - Développement sur la branche `dev` (ou feature/fix branches).
+   - Validation locale complète obligatoire : `npm run verify` (`lint` + `test` + `build`).
+
+2. **Étape 2 : Commit & Push sur `dev` + Contrôle GitHub Actions** :
+   - Commit et push sur `dev`.
+   - Attente et validation du workflow GitHub Actions : `CI / Verification Pipeline / Lint, Test & Build (push)` sur `dev` (doit être 100% vert ✅).
+
+3. **Étape 3 : Feu Vert Utilisateur & Ouverture de la PR vers `main` sur GitHub** :
+   - Dès que la CI sur `dev` est verte, l'utilisateur donne son accord et déclenche la Pull Request vers `main` directement sur GitHub.
+   - 🚫 **L'agent ne merge jamais automatiquement vers `main`**. Le merge est déclenché par l'utilisateur sur GitHub.
+
+4. **Étape 4 : Analyse SonarCloud sur la PR & Corrections itératives sur `dev`** :
+   - L'utilisateur transmet l'URL SonarCloud de la PR.
+   - L'agent récupère les anomalies SonarCloud via l'URL / API et les corrige sur `dev`.
+   - Cycle répété : correction sur `dev` -> `npm run verify` local -> push `dev` -> validation CI GitHub Actions -> re-scan SonarCloud sur la PR jusqu'à validation complète (Quality Gate: OK).
+
+5. **Étape 5 : Finalisation du Merge sur GitHub & Contrôle Post-Merge sur `main`** :
+   - Une fois la PR validée par SonarCloud et la CI, l'utilisateur finalise le merge sur GitHub.
+   - L'agent vérifie le bon passage de la CI GitHub Actions et de l'analyse SonarCloud sur la branche `main`.
 
 ---
 

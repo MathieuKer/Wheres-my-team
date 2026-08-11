@@ -111,9 +111,9 @@ const TeamConfigModal = ({
 
         {/* Status */}
         <div className="mb-4">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
             Statut
-          </label>
+          </span>
           {isReadOnly ? (
             <div className="flex items-center gap-2">
               <span className={`w-2.5 h-2.5 rounded-full ${team.status === 'dispo' ? 'bg-emerald-500' : team.status === 'en_route' ? 'bg-blue-500' : team.status === 'intervention' ? 'bg-red-500' : 'bg-amber-500'}`} />
@@ -133,6 +133,7 @@ const TeamConfigModal = ({
                 return (
                   <button
                     key={s.id}
+                    type="button"
                     onClick={() => { if (onUpdateStatus) onUpdateStatus(team.id, s.id as TeamStatus); }}
                     className={`py-1.5 text-xs font-bold rounded-lg border text-center transition-all ${
                       isActive ? s.colorClass : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
@@ -148,7 +149,7 @@ const TeamConfigModal = ({
 
         {/* Consignes / Notes */}
         <div className="mb-4">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+          <label htmlFor="team-description-textarea" className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
             Consignes / Notes
           </label>
           {isReadOnly ? (
@@ -157,6 +158,7 @@ const TeamConfigModal = ({
             </div>
           ) : (
             <textarea
+              id="team-description-textarea"
               placeholder="Membres, matériel, consignes..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -169,6 +171,7 @@ const TeamConfigModal = ({
         {/* Recentrer l'unité */}
         {!isReadOnly && onTeamsMove && (
           <button
+            type="button"
             onClick={handleResetPosition}
             className="w-full bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white font-bold py-2 rounded-xl text-xs transition-all flex items-center justify-center gap-1.5"
           >
@@ -179,6 +182,14 @@ const TeamConfigModal = ({
       </div>
     </div>
   );
+}
+
+function getPriorityBtnClass(p: string, isSelected: boolean): string {
+  if (!isSelected) return 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10';
+  if (p === 'P0') return 'bg-slate-950 border-red-500 text-red-500 font-black shadow-lg shadow-red-500/20';
+  if (p === 'P1') return 'bg-red-600/20 border-red-500 text-red-400 font-black';
+  if (p === 'P3') return 'bg-amber-500/20 border-amber-500 text-amber-400 font-black';
+  return 'bg-blue-600/20 border-blue-500 text-blue-400 font-black';
 };
 
 const InterventionConfigModal = ({
@@ -310,14 +321,7 @@ const InterventionConfigModal = ({
                     key={p}
                     type="button"
                     onClick={() => setPriority(p as InterventionPriority)}
-                    className={`py-1.5 text-xs font-bold rounded-lg border text-center transition-all ${
-                      isSelected 
-                        ? p === 'P0' ? 'bg-slate-950 border-red-500 text-red-500 font-black shadow-lg shadow-red-500/20'
-                        : p === 'P1' ? 'bg-red-600/20 border-red-500 text-red-400 font-black'
-                        : p === 'P3' ? 'bg-amber-500/20 border-amber-500 text-amber-400 font-black'
-                        : 'bg-blue-600/20 border-blue-500 text-blue-400 font-black'
-                        : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10'
-                    }`}
+                    className={`py-1.5 text-xs font-bold rounded-lg border text-center transition-all ${getPriorityBtnClass(p, isSelected)}`}
                   >
                     {p}
                   </button>
@@ -329,9 +333,9 @@ const InterventionConfigModal = ({
 
         {/* Attribution */}
         <div className="mb-4">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
             Équipe attribuée
-          </label>
+          </span>
           {/* Current assignment row */}
           <div className="flex items-center justify-between bg-black/20 rounded-lg p-3 border border-white/5 mb-3">
             <div className="flex items-center gap-2">
