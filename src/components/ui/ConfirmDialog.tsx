@@ -57,6 +57,7 @@ export function ConfirmDialog({
             <div className="text-sm text-slate-300 font-medium">{message}</div>
           </div>
           <button 
+            type="button"
             onClick={onCancel}
             className="self-start text-slate-500 hover:text-white transition-colors p-1"
             aria-label="Fermer"
@@ -66,12 +67,14 @@ export function ConfirmDialog({
         </div>
         <div className="bg-white/5 p-4 flex gap-3 justify-end border-t border-white/5">
           <button
+            type="button"
             onClick={onCancel}
             className="px-4 py-2 rounded-xl font-bold text-sm text-slate-300 hover:bg-white/5 transition-colors"
           >
             {cancelText}
           </button>
           <button
+            type="button"
             ref={confirmBtnRef}
             onClick={onConfirm}
             className="px-4 py-2 rounded-xl font-bold text-sm bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-500/20 transition-all focus:ring-2 focus:ring-red-400 focus:ring-offset-2 focus:ring-offset-slate-900 outline-none"

@@ -1,6 +1,7 @@
 import { useRef, useState, memo } from 'react';
 import type { Team } from '../../types';
 import { AlertTriangle, MapPin, Navigation } from 'lucide-react';
+import { getAbbreviation, handleMarkerDrag } from '../../lib/utils';
 
 interface TeamMarkerProps {
   team: Team;
@@ -13,6 +14,12 @@ interface TeamMarkerProps {
   isSelected?: boolean;
   mode?: 'reader' | 'deployment' | 'edition';
   onConfigure: () => void;
+}
+
+function getZIndex(isHovered: boolean, isSelected: boolean, status: string): number {
+  if (isHovered) return 800;
+  if (isSelected) return 500;
+  return status === 'intervention' ? 50 : 10;
 }
 
 export const TeamMarker = memo(function TeamMarker({ 
@@ -36,7 +43,7 @@ export const TeamMarker = memo(function TeamMarker({
     top: `${team.pos_y}%`,
     transform: `translate(-50%, -100%) scale(${1 / zoomScale})`,
     transformOrigin: 'bottom center',
-    zIndex: isHovered ? 800 : (isSelected ? 500 : (team.status === 'intervention' ? 50 : 10)),
+    zIndex: getZIndex(isHovered, isSelected, team.status),
     cursor: isDraggable ? 'grab' : 'default',
     touchAction: 'none',
   };
@@ -63,12 +70,6 @@ export const TeamMarker = memo(function TeamMarker({
     iconClass += " drop-shadow-[0_0_10px_#3b82f6]";
   }
 
-  const getAbbrev = (name: string) => {
-    const words = name.split(' ').filter(Boolean);
-    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-    return name.slice(0, 3).toUpperCase();
-  };
-
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isDraggable) return;
     if (e.button !== 0) return; 
@@ -82,47 +83,7 @@ export const TeamMarker = memo(function TeamMarker({
     }
     lastClickTimeRef.current = now;
 
-    const container = document.getElementById('map-bounds-container');
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
-
-    onDragStart(team.id);
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
-
-      const percentDx = (dx / rect.width) * 100;
-      const percentDy = (dy / rect.height) * 100;
-
-      onDragMove(team.id, percentDx, percentDy);
-    };
-
-    const onPointerUp = (upEvent: PointerEvent) => {
-      globalThis.removeEventListener('pointermove', onPointerMove);
-      globalThis.removeEventListener('pointerup', onPointerUp);
-      
-      const dx = upEvent.clientX - startX;
-      const dy = upEvent.clientY - startY;
-
-      const percentDx = (dx / rect.width) * 100;
-      const percentDy = (dy / rect.height) * 100;
-
-      onDragEnd(team.id, percentDx, percentDy);
-
-      // Open on tactile tap (touch pointer and did not move more than 5px)
-      const isTouch = upEvent.pointerType === 'touch';
-      const movedDistance = Math.sqrt(dx * dx + dy * dy);
-      if (isTouch && movedDistance < 5) {
-        onConfigure();
-      }
-    };
-
-    globalThis.addEventListener('pointermove', onPointerMove);
-    globalThis.addEventListener('pointerup', onPointerUp);
+    handleMarkerDrag(e, team.id, onDragStart, onDragMove, onDragEnd, onConfigure);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -131,6 +92,16 @@ export const TeamMarker = memo(function TeamMarker({
     e.stopPropagation();
     onConfigure();
   };
+
+  const tooltipPlacementClass = team.pos_y < 15
+    ? 'top-[115%] bottom-auto translate-y-[-8px] group-hover/outer:translate-y-0'
+    : 'bottom-[110%] top-auto translate-y-2 group-hover/outer:translate-y-0';
+
+  const tooltipWidthClass = team.description ? 'w-48 whitespace-normal text-left' : 'whitespace-nowrap';
+
+  const badgeSelectionClass = isSelected 
+    ? 'bg-blue-600 text-white border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.4)] scale-105' 
+    : 'bg-white text-slate-900 border-slate-200 shadow-sm';
 
   return (
     <div 
@@ -176,13 +147,7 @@ export const TeamMarker = memo(function TeamMarker({
 
         {/* Name Tooltip (visible on hover) */}
         <div 
-          className={`absolute mb-1 text-[11px] px-3 py-1.5 rounded-2xl shadow-2xl opacity-0 group-hover/outer:opacity-100 transition-all duration-300 border border-white/20 z-20 pointer-events-none font-display flex flex-col gap-0.5 ${
-            team.pos_y < 15
-              ? 'top-[115%] bottom-auto translate-y-[-8px] group-hover/outer:translate-y-0' 
-              : 'bottom-[110%] top-auto translate-y-2 group-hover/outer:translate-y-0'
-          } ${
-            team.description ? 'w-48 whitespace-normal text-left' : 'whitespace-nowrap'
-          }`}
+          className={`absolute mb-1 text-[11px] px-3 py-1.5 rounded-2xl shadow-2xl opacity-0 group-hover/outer:opacity-100 transition-all duration-300 border border-white/20 z-20 pointer-events-none font-display flex flex-col gap-0.5 ${tooltipPlacementClass} ${tooltipWidthClass}`}
           style={{ 
             backgroundColor: `${team.color}f0`, 
             color: '#fff',
@@ -205,14 +170,10 @@ export const TeamMarker = memo(function TeamMarker({
 
         {/* Permanent Abbreviation Badge */}
         <div 
-          className={`absolute top-[85%] left-1/2 -translate-x-1/2 mt-0.5 text-[7px] md:text-[9px] font-black leading-none px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-lg whitespace-nowrap border pointer-events-none z-10 font-display transition-all ${
-            isSelected 
-              ? 'bg-blue-600 text-white border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.4)] scale-105' 
-              : 'bg-white text-slate-900 border-slate-200 shadow-sm'
-          }`}
+          className={`absolute top-[85%] left-1/2 -translate-x-1/2 mt-0.5 text-[7px] md:text-[9px] font-black leading-none px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-lg whitespace-nowrap border pointer-events-none z-10 font-display transition-all ${badgeSelectionClass}`}
           style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}
         >
-          {getAbbrev(team.name)}
+          {getAbbreviation(team.name)}
         </div>
       </div>
     </div>

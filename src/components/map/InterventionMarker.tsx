@@ -1,46 +1,53 @@
-import { memo, useEffect, useState } from 'react';
+import { useRef, useState, useEffect, memo } from 'react';
 import type { Intervention, Team } from '../../types';
 import { Clock } from 'lucide-react';
+import { getAbbreviation, handleMarkerDrag } from '../../lib/utils';
 
 interface InterventionMarkerProps {
   intervention: Intervention;
   teams: Team[];
+  onDoubleClick?: () => void;
   onDragStart: (id: string) => void;
   onDragMove: (id: string, dx: number, dy: number) => void;
   onDragEnd: (id: string, dx: number, dy: number) => void;
+  onConfigure: () => void;
   isDraggable?: boolean;
   zoomScale?: number;
   mode?: 'reader' | 'deployment' | 'edition';
-  onConfigure: () => void;
   isSelected?: boolean;
   isDropTarget?: boolean;
 }
 
-const calculateElapsed = (createdAtStr: string) => {
-  const start = new Date(createdAtStr).getTime();
-  const diffMs = Date.now() - start;
-  const diffMins = Math.max(0, Math.floor(diffMs / 60000));
-  
+function calculateElapsed(createdAt: string): string {
+  const diffMs = Date.now() - new Date(createdAt).getTime();
+  const diffMins = Math.floor(diffMs / 60000);
   if (diffMins < 60) return `${diffMins}m`;
   const hours = Math.floor(diffMins / 60);
-  const remainingMins = diffMins % 60;
-  return `${hours}h${remainingMins.toString().padStart(2, '0')}`;
-};
+  const mins = diffMins % 60;
+  return `${hours}h${mins > 0 ? `${mins}m` : ''}`;
+}
+
+function getInterventionZIndex(priority: string, isSelected: boolean): number {
+  if (priority === 'P0') return 80;
+  return isSelected ? 75 : 70;
+}
 
 export const InterventionMarker = memo(function InterventionMarker({
   intervention,
   teams,
+  onDoubleClick = () => {},
   onDragStart,
   onDragMove,
   onDragEnd,
+  onConfigure,
   isDraggable = true,
   zoomScale = 1,
   mode = 'reader',
-  onConfigure,
   isSelected = false,
   isDropTarget = false
 }: Readonly<InterventionMarkerProps>) {
   const [elapsed, setElapsed] = useState(() => calculateElapsed(intervention.created_at));
+  const lastClickTimeRef = useRef<number>(0);
 
   // Compute active elapsed time
   useEffect(() => {
@@ -60,7 +67,7 @@ export const InterventionMarker = memo(function InterventionMarker({
     top: `${intervention.pos_y}%`,
     transform: `translate(-50%, -50%) scale(${1 / zoomScale})`,
     transformOrigin: 'center center',
-    zIndex: intervention.priority === 'P0' ? 80 : (isSelected ? 75 : 70),
+    zIndex: getInterventionZIndex(intervention.priority, isSelected),
     cursor: isDraggable ? 'grab' : 'default',
     touchAction: 'none',
   };
@@ -80,47 +87,15 @@ export const InterventionMarker = memo(function InterventionMarker({
     if (e.button !== 0) return;
     e.stopPropagation();
 
-    const container = document.getElementById('map-bounds-container');
-    if (!container) return;
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 300) {
+      onDoubleClick();
+      lastClickTimeRef.current = 0;
+      return;
+    }
+    lastClickTimeRef.current = now;
 
-    const rect = container.getBoundingClientRect();
-    const startX = e.clientX;
-    const startY = e.clientY;
-
-    onDragStart(intervention.id);
-
-    const onPointerMove = (moveEvent: PointerEvent) => {
-      const dx = moveEvent.clientX - startX;
-      const dy = moveEvent.clientY - startY;
-
-      const percentDx = (dx / rect.width) * 100;
-      const percentDy = (dy / rect.height) * 100;
-
-      onDragMove(intervention.id, percentDx, percentDy);
-    };
-
-    const onPointerUp = (upEvent: PointerEvent) => {
-      globalThis.removeEventListener('pointermove', onPointerMove);
-      globalThis.removeEventListener('pointerup', onPointerUp);
-
-      const dx = upEvent.clientX - startX;
-      const dy = upEvent.clientY - startY;
-
-      const percentDx = (dx / rect.width) * 100;
-      const percentDy = (dy / rect.height) * 100;
-
-      onDragEnd(intervention.id, percentDx, percentDy);
-
-      // Open on tactile tap (touch pointer and did not move more than 5px)
-      const isTouch = upEvent.pointerType === 'touch';
-      const movedDistance = Math.sqrt(dx * dx + dy * dy);
-      if (isTouch && movedDistance < 5) {
-        onConfigure();
-      }
-    };
-
-    globalThis.addEventListener('pointermove', onPointerMove);
-    globalThis.addEventListener('pointerup', onPointerUp);
+    handleMarkerDrag(e, intervention.id, onDragStart, onDragMove, onDragEnd, onConfigure);
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -130,55 +105,63 @@ export const InterventionMarker = memo(function InterventionMarker({
     onConfigure();
   };
 
-  const getAbbrev = (name: string) => {
-    const words = name.split(' ').filter(Boolean);
-    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-    return name.slice(0, 3).toUpperCase();
-  };
-
   return (
     <div 
       style={style} 
       onPointerDown={handlePointerDown}
       onContextMenu={handleContextMenu}
-      className="nodrag relative select-none"
+      className="nodrag group relative flex flex-col items-center select-none"
     >
-      {/* Hexagon Shape */}
-      <div className={`w-7 h-7 flex items-center justify-center relative transition-transform duration-300 hover:scale-110 active:scale-95 ${intervention.priority === 'P0' ? 'animate-pulse' : ''}`}>
-        {/* Drop target pulsing halo */}
+      {/* Halo Pulsant / Drop Target */}
+      <div className="relative flex items-center justify-center">
         {isDropTarget && (
-          <div className="absolute -inset-2.5 rounded-full border border-blue-400 bg-blue-400/20 animate-pulse pointer-events-none z-0 shadow-[0_0_15px_rgba(59,130,246,0.5)]" />
+          <div className="absolute inset-0 -m-3 rounded-full border-2 border-dashed border-white animate-spin duration-3000 pointer-events-none" />
         )}
-        {/* Selected Indicator Outline ring */}
-        {isSelected && (
-          <div className="absolute -inset-1.5 rounded-full border border-dashed border-blue-400 animate-[spin_10s_linear_infinite] pointer-events-none z-0" />
+        
+        {/* Glow effect on high priority */}
+        {(intervention.priority === 'P0' || intervention.priority === 'P1') && (
+          <div className={`absolute inset-0 -m-1 rounded-full animate-ping opacity-25 ${colors.bg}`} />
         )}
-        <svg viewBox="0 0 100 100" className="absolute top-0 left-0 w-full h-full filter drop-shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
-          <polygon
-            points="50,5 93,30 93,80 50,95 7,80 7,30"
-            className={`${colors.bg} stroke-2 ${colors.border}`}
-          />
-        </svg>
-        <span className={`relative z-10 text-[10px] font-black font-display select-none ${intervention.priority === 'P0' ? 'text-red-500' : 'text-white'}`}>
-          {intervention.number}
-        </span>
 
-        {/* Assigned Team small initials indicator */}
+        {/* Hexagonal Marker Base */}
+        <div className={`relative flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-2xl shadow-xl transition-all duration-200 group-hover:scale-110 ${isSelected ? 'ring-2 ring-white scale-105' : ''}`}>
+          <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
+            <polygon 
+              points="50 3, 93 25, 93 75, 50 97, 7 75, 7 25" 
+              className={`${colors.bg} ${colors.border}`}
+              strokeWidth="6"
+            />
+          </svg>
+
+          {/* Icon & Priority number inside */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-white font-black font-display pointer-events-none leading-none">
+            <span className="text-[10px] md:text-xs">#{intervention.number}</span>
+            <span className="text-[8px] md:text-[9px] opacity-80">{intervention.priority}</span>
+          </div>
+        </div>
+
+        {/* Assigned Team Badge (if any) */}
         {assignedTeam && (
           <div 
-            className="absolute -top-1 -right-1 text-[8px] font-black w-4.5 h-4.5 rounded-full border border-white flex items-center justify-center shadow-lg text-white select-none z-20"
+            className="absolute -bottom-2 -right-2 px-1.5 py-0.5 rounded-full text-[8px] font-black text-white shadow-md border border-white/40 flex items-center gap-0.5"
             style={{ backgroundColor: assignedTeam.color }}
-            title={`Assigné à : ${assignedTeam.name}`}
+            title={`Assigné à ${assignedTeam.name}`}
           >
-            {getAbbrev(assignedTeam.name)}
+            {getAbbreviation(assignedTeam.name)}
           </div>
         )}
       </div>
 
-      {/* Timer text just below the hexagon */}
-      <div className="absolute top-[102%] left-1/2 -translate-x-1/2 flex items-center gap-0.5 text-[8px] font-bold px-1 py-0.5 rounded bg-slate-950/80 border border-white/5 text-slate-300 backdrop-blur-sm shadow-md pointer-events-none whitespace-nowrap">
-        <Clock className="w-2 h-2 text-slate-400" />
-        {elapsed}
+      {/* Timer & Info Tooltip on Hover */}
+      <div className="absolute top-[110%] mt-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50 bg-slate-900/95 border border-white/20 rounded-xl px-2.5 py-1 text-white shadow-2xl backdrop-blur-md whitespace-nowrap flex flex-col gap-0.5 text-center font-display">
+        <span className="text-xs font-bold text-slate-100">{intervention.description || `Appel #${intervention.number}`}</span>
+        <div className="flex items-center justify-center gap-1 text-[10px] text-slate-400">
+          <Clock className="w-2.5 h-2.5" />
+          <span>{elapsed}</span>
+          {assignedTeam && (
+            <span className="text-blue-400 font-semibold">• {assignedTeam.name}</span>
+          )}
+        </div>
       </div>
     </div>
   );

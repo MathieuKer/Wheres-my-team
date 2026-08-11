@@ -1,5 +1,5 @@
 import { useState, useMemo, memo, useRef, useEffect } from 'react';
-import type { Team, TeamStatus, Zone } from '../../types';
+import type { Team, TeamStatus, Zone, Intervention } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { parseZoneType } from '../../lib/utils';
 import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal, RotateCcw, Navigation, Clock, X, PlusCircle } from 'lucide-react';
@@ -318,8 +318,6 @@ const TeamRow = memo(function TeamRow({
     </div>
   );
 });
-
-import type { Intervention } from '../../types';
 
 interface SidebarProps {
   teams: Team[];
@@ -1038,20 +1036,31 @@ export const Sidebar = memo(function Sidebar({
                   return `${Math.floor(mins / 60)}h${(mins % 60).toString().padStart(2, '0')}`;
                 };
 
+                const getPriorityBadgeClass = (p: string) => {
+                  if (p === 'P0') return 'bg-slate-950 border border-red-500 text-red-500 animate-pulse';
+                  if (p === 'P1') return 'bg-red-600 text-white';
+                  if (p === 'P3') return 'bg-amber-500 text-white';
+                  return 'bg-blue-500 text-white';
+                };
+
                 return (
                   <div 
                     key={intervention.id}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => onConfigureIntervention?.(intervention.id)}
-                    className="flex flex-col gap-1.5 p-3 rounded-xl border border-white/5 bg-slate-950/25 text-slate-300 relative group/int hover:border-white/10 hover:bg-slate-950/40 transition-all shadow-sm cursor-pointer"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onConfigureIntervention?.(intervention.id);
+                      }
+                    }}
+                    className="flex flex-col gap-1.5 p-3 rounded-xl border border-white/5 bg-slate-950/25 text-slate-300 relative group/int hover:border-white/10 hover:bg-slate-950/40 transition-all shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/50"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2 min-w-0">
                         {/* Priority Badge */}
-                        <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center text-white shrink-0 shadow-md ${
-                          intervention.priority === 'P0' ? 'bg-slate-950 border border-red-500 text-red-500 animate-pulse' :
-                          intervention.priority === 'P1' ? 'bg-red-600' :
-                          intervention.priority === 'P3' ? 'bg-amber-500' : 'bg-blue-500'
-                        }`}>
+                        <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shrink-0 shadow-md ${getPriorityBadgeClass(intervention.priority)}`}>
                           {intervention.number}
                         </span>
                         <span className="text-xs font-bold text-slate-200 truncate leading-none">

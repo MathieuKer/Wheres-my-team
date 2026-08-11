@@ -585,7 +585,7 @@ export function MapContainer({
 
     if (mode === 'deployment' && isLocked) {
       // Ignorer si on clique sur un marqueur
-      if ((e.target as HTMLElement).closest('.group\\/outer')) return;
+      if ((e.target as HTMLElement).closest(String.raw`.group\/outer`)) return;
 
       const coords = getRelativeCoords(e);
       if (coords) {

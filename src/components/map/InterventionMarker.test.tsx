@@ -40,8 +40,8 @@ describe('InterventionMarker Component', () => {
       renderWithProviders(<InterventionMarker {...mockProps} mode="deployment" />);
     });
 
-    // Check number rendering
-    expect(screen.getByText('1')).toBeInTheDocument();
+    // Check number rendering (#1)
+    expect(screen.getByText('#1')).toBeInTheDocument();
 
     // Check dynamic timer rendering (around 2m)
     expect(screen.getByText('2m')).toBeInTheDocument();
@@ -52,7 +52,7 @@ describe('InterventionMarker Component', () => {
       renderWithProviders(<InterventionMarker {...mockProps} mode="deployment" />);
     });
 
-    const marker = screen.getByText('1');
+    const marker = screen.getByText('#1');
     await act(async () => {
       fireEvent.contextMenu(marker);
     });

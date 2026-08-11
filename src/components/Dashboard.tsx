@@ -73,6 +73,15 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
     }, 3000);
   };
 
+  const getModeButtonClass = (targetMode: string) => {
+    if (state.mode === targetMode) {
+      if (targetMode === 'reader') return 'bg-slate-700 text-white shadow-md';
+      if (targetMode === 'deployment') return 'bg-blue-600 text-white shadow-md shadow-blue-500/10';
+      return 'bg-amber-600 text-white shadow-md shadow-amber-500/10';
+    }
+    return 'text-slate-400 hover:text-slate-200';
+  };
+
   return (
     <div className="flex h-[100dvh] w-screen overflow-hidden bg-background relative">
       
@@ -89,6 +98,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
       {/* MENU BUTTON */}
       <div className="absolute top-4 left-4 z-50">
         <button 
+          type="button"
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
           className="bg-slate-800/90 backdrop-blur p-2.5 rounded-lg text-white shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-slate-600 hover:bg-slate-700 transition-colors flex items-center justify-center"
         >
@@ -151,17 +161,12 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
         className={`fixed inset-y-0 right-0 transform ${isSidebarOpen ? 'translate-x-0' : 'translate-x-full'} md:translate-x-0 md:relative flex max-w-[85vw] flex-shrink-0 glass-panel flex-col shadow-2xl z-40 ${isResizing ? 'transition-none' : 'transition-all duration-300'} md:border-none rounded-l-[2.5rem] md:rounded-none ${isSidebarOpen ? 'md:flex' : 'md:hidden'}`}
         style={isMobile ? undefined : { width: `${sidebarWidth}px` }}
       >
-        {/* DRAG HANDLE FOR RESIZING */}
+        {/* RESIZE HANDLE */}
         {!isMobile && (
-          <div 
-            role="separator"
-            tabIndex={0}
+          <button 
+            type="button"
             aria-label="Redimensionner la barre latérale"
-            aria-valuenow={sidebarWidth}
-            aria-valuemin={280}
-            aria-valuemax={600}
-            aria-orientation="vertical"
-            className="absolute top-0 bottom-0 left-0 w-1.5 cursor-ew-resize hover:bg-blue-500/30 active:bg-blue-500/70 focus:bg-blue-500/50 outline-none transition-colors z-50"
+            className="absolute top-0 bottom-0 left-0 w-1.5 p-0 bg-transparent border-none cursor-ew-resize hover:bg-blue-500/30 active:bg-blue-500/70 focus:bg-blue-500/50 outline-none transition-colors z-50"
             onMouseDown={handleMouseDown}
             onKeyDown={(e) => {
               if (e.key === 'ArrowLeft') {
@@ -180,6 +185,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2.5 font-bold text-lg font-display">
               <button 
+                type="button"
                 onClick={onBack}
                 className="w-8 h-8 bg-white/5 hover:bg-white/10 rounded-lg flex items-center justify-center border border-white/10 transition-colors"
                 title="Retour aux cartes"
@@ -191,6 +197,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
             </div>
 
             <button 
+              type="button"
               onClick={signOut} 
               className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-400/10 rounded-xl transition-all" 
               title="Se déconnecter"
@@ -204,36 +211,27 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           <div className="flex flex-col gap-1.5">
             <div className="grid grid-cols-3 bg-black/40 p-1 rounded-xl border border-white/5 gap-1">
               <button
+                type="button"
                 onClick={() => actions.setMode('reader')}
-                className={`py-1.5 rounded-lg text-[10px] sm:text-[11px] font-bold font-display flex flex-col sm:flex-row items-center justify-center gap-1 transition-all leading-tight ${
-                  state.mode === 'reader' 
-                    ? 'bg-slate-700 text-white shadow-md' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
+                className={`py-1.5 rounded-lg text-[10px] sm:text-[11px] font-bold font-display flex flex-col sm:flex-row items-center justify-center gap-1 transition-all leading-tight ${getModeButtonClass('reader')}`}
                 title="Lecture seule : consultation uniquement, aucun déplacement possible."
               >
                 <Eye className="w-3.5 h-3.5" />
                 <span>Lecture seule</span>
               </button>
               <button
+                type="button"
                 onClick={() => actions.setMode('deployment')}
-                className={`py-1.5 rounded-lg text-[10px] sm:text-[11px] font-bold font-display flex flex-col sm:flex-row items-center justify-center gap-1 transition-all leading-tight ${
-                  state.mode === 'deployment' 
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/10' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
+                className={`py-1.5 rounded-lg text-[10px] sm:text-[11px] font-bold font-display flex flex-col sm:flex-row items-center justify-center gap-1 transition-all leading-tight ${getModeButtonClass('deployment')}`}
                 title="Suivi en direct : déplacez les équipes et gérez les appels sur le terrain."
               >
                 <Layout className="w-3.5 h-3.5" />
                 <span>Suivi direct</span>
               </button>
               <button
+                type="button"
                 onClick={() => actions.setMode('edition')}
-                className={`py-1.5 rounded-lg text-[10px] sm:text-[11px] font-bold font-display flex flex-col sm:flex-row items-center justify-center gap-1 transition-all leading-tight ${
-                  state.mode === 'edition' 
-                    ? 'bg-amber-600 text-white shadow-md shadow-amber-500/10' 
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
+                className={`py-1.5 rounded-lg text-[10px] sm:text-[11px] font-bold font-display flex flex-col sm:flex-row items-center justify-center gap-1 transition-all leading-tight ${getModeButtonClass('edition')}`}
                 title="Modifier la carte : dessinez des zones tactiques et gérez le plan de fond."
               >
                 <Settings className="w-3.5 h-3.5" />
@@ -277,6 +275,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
         {state.mode === 'edition' && (
           <div className="p-6 border-t border-white/5 bg-black/20">
             <button 
+              type="button"
               onClick={actions.requestFlush}
               className="w-full bg-red-950/30 border border-red-500/20 hover:bg-red-500 hover:text-white transition-all py-3 rounded-xl text-sm font-bold text-red-400 font-display shadow-lg shadow-red-900/10"
             >
@@ -288,6 +287,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
 
       {/* EASTER EGG */}
       <button 
+        type="button"
         onClick={triggerUnicorn}
         className="absolute bottom-2 left-2 z-50 opacity-30 hover:opacity-100 transition-opacity duration-300 cursor-pointer text-2xl select-none grayscale hover:grayscale-0"
         title="Secret"
@@ -391,12 +391,14 @@ function DoubleClickConfirmModal({
         <div className="bg-white/5 p-4 flex flex-col gap-2 border-t border-white/5">
           <div className="flex gap-3 justify-end">
             <button
+              type="button"
               onClick={onCancel}
               className="px-4 py-2 rounded-xl font-bold text-sm text-slate-300 hover:bg-white/5 transition-colors"
             >
               Annuler (Échap)
             </button>
             <button
+              type="button"
               onClick={onConfirm}
               className="px-4 py-2 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20 transition-all outline-none"
             >

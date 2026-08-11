@@ -11,6 +11,13 @@
 
 ---
 
+## 🔀 Git Branching & Deployment Strategy (Mandatory)
+- 🚫 **Strict Protection of `main` (Production)** : Never push code changes directly to `main`.
+- 🌿 **Development Branch (`dev`)** : All bug fixes, refactoring, feature developments, and SonarCloud Quality Gate analyses must be executed on the `dev` branch (or feature/fix branches).
+- 🚦 **Merge Criteria** : Merging into `main` is permitted only after automated verification (`npm run verify`), GitHub Actions CI success, and SonarCloud Quality Gate validation.
+
+---
+
 ## 📋 Execution Workflow (Mandatory for every change)
 
 1. **Plan Mode First**:
@@ -30,7 +37,7 @@
    - Fix all compilation (`tsc`), linting (`eslint`), and test (`vitest`) failures immediately before concluding a task.
 
 5. **CI/CD & Deployment Readiness**:
-   - **GitHub Actions**: Automated pipeline (`.github/workflows/ci.yml`) runs `npm run verify` on every `push` and `pull_request` to `main`.
+   - **GitHub Actions**: Automated pipeline (`.github/workflows/ci.yml`) runs `npm run verify` on every `push` and `pull_request` to `dev` and `main`.
    - **Netlify Hosting Constraints**:
      - Ensure global SPA redirection rule `/* -> /index.html 200` is preserved in `netlify.toml`.
      - Static assets under `/assets/*` must retain immutable long-term caching (`public, max-age=31536000, immutable`).
