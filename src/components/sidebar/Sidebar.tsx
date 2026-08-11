@@ -1,4 +1,4 @@
-import { useState, useMemo, memo, useRef, useEffect } from 'react';
+import { useState, useReducer, useMemo, memo, useRef, useEffect } from 'react';
 import type { Team, TeamStatus, Zone, Intervention } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { parseZoneType } from '../../lib/utils';
@@ -280,38 +280,42 @@ const TeamRow = memo(function TeamRow({
         <div 
           className="absolute bg-slate-950/95 border border-white/10 rounded-xl py-1 shadow-2xl z-[100] w-40 text-left font-display animate-in fade-in duration-100"
           style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
-          onPointerDown={(e) => e.stopPropagation()} // Stop propagation to avoid drag trigger
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div className="px-3 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-white/5 mb-1">
             Changer statut
           </div>
           <button 
+            type="button"
             onClick={() => { onUpdateStatus(team.id, 'dispo'); setContextMenuPos(null); }}
             className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-400 font-semibold flex items-center gap-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            Disponible
+            <span>Disponible</span>
           </button>
           <button 
+            type="button"
             onClick={() => { onUpdateStatus(team.id, 'en_route'); setContextMenuPos(null); }}
             className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-blue-500/20 hover:text-blue-400 font-semibold flex items-center gap-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-            En direction
+            <span>En direction</span>
           </button>
           <button 
+            type="button"
             onClick={() => { onUpdateStatus(team.id, 'intervention'); setContextMenuPos(null); }}
             className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-red-500/20 hover:text-red-400 font-semibold flex items-center gap-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-            Intervention
+            <span>Intervention</span>
           </button>
           <button 
+            type="button"
             onClick={() => { onUpdateStatus(team.id, 'pause'); setContextMenuPos(null); }}
             className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-amber-500/20 hover:text-amber-400 font-semibold flex items-center gap-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-            En pause
+            <span>En pause</span>
           </button>
         </div>
       )}
@@ -348,7 +352,7 @@ export const Sidebar = memo(function Sidebar({
   onAddTeam, 
   onUpdateStatus, 
   onUpdateColor, 
-  onUpdateName,
+  onUpdateName, 
   onDeleteTeam, 
   onMapUpload,
   zones,
@@ -369,10 +373,10 @@ export const Sidebar = memo(function Sidebar({
   const [newColor, setNewColor] = useState('#3b82f6');
   const [uploading, setUploading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const [, setTick] = useState(0);
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   useEffect(() => {
-    const interval = setInterval(() => setTick(t => t + 1), 15000);
+    const interval = setInterval(forceUpdate, 15000);
     return () => clearInterval(interval);
   }, []);
 

@@ -61,11 +61,7 @@ const TeamConfigModal = ({
   // Save and close on Escape or Ctrl+Enter
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopImmediatePropagation();
-        handleSaveDescription();
-        onClose();
-      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
         e.stopImmediatePropagation();
         handleSaveDescription();
         onClose();
@@ -73,7 +69,7 @@ const TeamConfigModal = ({
     };
     window.addEventListener('keydown', handleKeyDown, true);
     return () => window.removeEventListener('keydown', handleKeyDown, true);
-  }, [description, onClose, handleSaveDescription]);
+  }, [onClose, handleSaveDescription]);
 
   // Sync description if prop changes during render
   if ((team.description ?? '') !== prevDesc) {
@@ -773,7 +769,7 @@ export function MapContainer({
       interventions.forEach(intervention => {
         const idx = newX - intervention.pos_x;
         const idy = newY - intervention.pos_y;
-        const dist = Math.sqrt(idx * idx + idy * idy);
+        const dist = Math.hypot(idx, idy);
         if (dist < minDistance) {
           minDistance = dist;
           nearestIntervention = intervention;
@@ -784,11 +780,11 @@ export function MapContainer({
         // Unassign this team from any other intervention first to prevent dual assignment
         const otherInts = interventions.filter(i => i.assigned_team_id === t.id && i.id !== (nearestIntervention as Intervention).id);
         for (const otherInt of otherInts) {
-          await onInterventionUpdate(otherInt.id, { assigned_team_id: null });
+          onInterventionUpdate(otherInt.id, { assigned_team_id: null });
         }
 
         // Assign to the new intervention
-        await onInterventionUpdate((nearestIntervention as Intervention).id, { assigned_team_id: t.id });
+        onInterventionUpdate((nearestIntervention as Intervention).id, { assigned_team_id: t.id });
 
         // Snap the team position to the intervention position
         onTeamsMove([{ id, x: (nearestIntervention as Intervention).pos_x, y: (nearestIntervention as Intervention).pos_y }]);
