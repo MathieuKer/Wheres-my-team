@@ -3,7 +3,12 @@
 ## Vibe Coding Instructions
 You must strictly follow the rules defined in [GEMINI.md](file:///Users/mkeromnes/repos/Wheres-my-team/GEMINI.md).
 
-1. **Git Branching Strategy**: Never push directly to `main`. All work, refactoring, and SonarCloud fixes must be developed and pushed on the `dev` branch or feature/fix branches. Merging `dev` into `main` is performed by the agent ONLY upon explicit user authorization ("Merge vers main" / "Merge en prod"). Post-merge SonarCloud API checks are mandatory.
+1. **Workflow de Dév & Déploiement** :
+   - Étape 1 : Développement et validation locale (`npm run verify`).
+   - Étape 2 : Push sur `dev` et attente du succès GitHub Actions (`CI / Verification Pipeline / Lint, Test & Build (push)`).
+   - Étape 3 : Feu vert utilisateur pour ouvrir la PR vers `main` sur GitHub. L'agent ne merge jamais lui-même sur `main`.
+   - Étape 4 : Analyse SonarCloud sur la PR via l'URL transmise par l'utilisateur et corrections itératives sur `dev` jusqu'à validation complète (Quality Gate: OK).
+   - Étape 5 : Finalisation du merge sur GitHub par l'utilisateur, puis contrôle post-merge de la CI et SonarCloud sur `main`.
 2. **Plan Mode First**: Before executing any code changes or running modifying commands, analyze the codebase, list your assumptions, outline proposed changes, and write an implementation plan. Wait for explicit approval from the user.
 3. **Lean & Concise Code**: Avoid over-engineering, write clear, readable, and concise TypeScript/React code. Follow patterns from existing successful components in the repository.
 4. **Automated Verification**: After any code changes, run the project's local verification suite:
