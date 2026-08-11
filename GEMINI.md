@@ -14,7 +14,8 @@
 ## 🔀 Git Branching & Deployment Strategy (Mandatory)
 - 🚫 **Strict Protection of `main` (Production)** : Never push code changes directly to `main`.
 - 🌿 **Development Branch (`dev`)** : All bug fixes, refactoring, feature developments, and SonarCloud Quality Gate analyses must be executed on the `dev` branch (or feature/fix branches).
-- 🚦 **Merge Criteria** : Merging into `main` is permitted only after automated verification (`npm run verify`), GitHub Actions CI success, and SonarCloud Quality Gate validation.
+- 🚦 **Merge Criteria & Explicit User Authorization** : Merging `dev` into `main` is executed by the agent ONLY upon explicit user request (e.g., "Merge vers main" / "Merge en prod"), and after automated verification (`npm run verify`), GitHub Actions CI success, and SonarCloud Quality Gate validation.
+- 📡 **Post-Merge SonarCloud Check** : Immediately after a merge to `main`, inspect SonarCloud API results on `main` to confirm production health.
 
 ---
 
