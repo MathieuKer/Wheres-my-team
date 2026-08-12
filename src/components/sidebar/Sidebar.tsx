@@ -8,6 +8,88 @@ import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Typ
 import { ColorPicker } from './ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 
+function TeamRowStatusBadge({ status }: { readonly status: TeamStatus }) {
+  return (
+    <div className="shrink-0 text-[10px] px-2.5 py-1 rounded-lg bg-black/30 border border-white/5 text-slate-400 font-semibold font-display flex items-center gap-1.5">
+      {status === 'intervention' && (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-red-400 font-black">Intervention</span>
+        </>
+      )}
+      {status === 'en_route' && (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <span className="text-blue-400 font-black">En route</span>
+        </>
+      )}
+      {status === 'pause' && (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span className="text-amber-500 font-black">Pause</span>
+        </>
+      )}
+      {status === 'dispo' && (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span className="text-emerald-400 font-black">Disponible</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+function TeamRowStatusControls({ 
+  team, 
+  isCompact, 
+  btnPadding, 
+  iconClassName, 
+  onUpdateStatus 
+}: { 
+  readonly team: Team; 
+  readonly isCompact: boolean; 
+  readonly btnPadding: string; 
+  readonly iconClassName: string; 
+  readonly onUpdateStatus: (id: string, status: TeamStatus) => void;
+}) {
+  return (
+    <div className={`flex items-center gap-0.5 shrink-0 bg-black/20 rounded-lg ${isCompact ? 'p-0.5' : 'p-1'} border border-white/5`}>
+      <button 
+        type="button"
+        onClick={() => onUpdateStatus(team.id, 'dispo')}
+        className={`${btnPadding} transition-all ${team.status === 'dispo' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}
+        aria-label="Marquer comme disponible"
+      >
+        <Play className={iconClassName} aria-hidden="true" />
+      </button>
+      <button 
+        type="button"
+        onClick={() => onUpdateStatus(team.id, 'en_route')}
+        className={`${btnPadding} transition-all ${team.status === 'en_route' ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-blue-400'}`}
+        aria-label="Marquer en route"
+      >
+        <Navigation className={iconClassName} aria-hidden="true" />
+      </button>
+      <button 
+        type="button"
+        onClick={() => onUpdateStatus(team.id, 'intervention')}
+        className={`${btnPadding} transition-all ${team.status === 'intervention' ? 'bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse' : 'text-slate-500 hover:bg-white/5 hover:text-red-400'}`}
+        aria-label="Marquer en intervention"
+      >
+        <AlertTriangle className={iconClassName} aria-hidden="true" />
+      </button>
+      <button 
+        type="button"
+        onClick={() => onUpdateStatus(team.id, 'pause')}
+        className={`${btnPadding} transition-all ${team.status === 'pause' ? 'bg-amber-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-amber-400'}`}
+        aria-label="Marquer en pause"
+      >
+        <Coffee className={iconClassName} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
+
 interface TeamRowProps {
   team: Team;
   onUpdateStatus: (id: string, status: TeamStatus) => void;
@@ -137,69 +219,17 @@ const TeamRow = memo(function TeamRow({
             />
           )}
         </div>
-        
+
         {isReadOnly ? (
-          <div className="shrink-0 text-[10px] px-2.5 py-1 rounded-lg bg-black/30 border border-white/5 text-slate-400 font-semibold font-display flex items-center gap-1.5">
-            {team.status === 'intervention' && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-red-400 font-black">Intervention</span>
-              </>
-            )}
-            {team.status === 'en_route' && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                <span className="text-blue-400 font-black">En route</span>
-              </>
-            )}
-            {team.status === 'pause' && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span className="text-amber-500 font-black">Pause</span>
-              </>
-            )}
-            {team.status === 'dispo' && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-emerald-400 font-black">Disponible</span>
-              </>
-            )}
-          </div>
+          <TeamRowStatusBadge status={team.status} />
         ) : (
-          <div className={`flex items-center gap-0.5 shrink-0 bg-black/20 rounded-lg ${isCompact ? 'p-0.5' : 'p-1'} border border-white/5`}>
-            <button 
-              type="button"
-              onClick={() => onUpdateStatus(team.id, 'dispo')}
-              className={`${btnPadding} transition-all ${team.status === 'dispo' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}
-              aria-label="Marquer comme disponible"
-            >
-              <Play className={iconClassName} aria-hidden="true" />
-            </button>
-            <button 
-              type="button"
-              onClick={() => onUpdateStatus(team.id, 'en_route')}
-              className={`${btnPadding} transition-all ${team.status === 'en_route' ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-blue-400'}`}
-              aria-label="Marquer en route"
-            >
-              <Navigation className={iconClassName} aria-hidden="true" />
-            </button>
-            <button 
-              type="button"
-              onClick={() => onUpdateStatus(team.id, 'intervention')}
-              className={`${btnPadding} transition-all ${team.status === 'intervention' ? 'bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse' : 'text-slate-500 hover:bg-white/5 hover:text-red-400'}`}
-              aria-label="Marquer en intervention"
-            >
-              <AlertTriangle className={iconClassName} aria-hidden="true" />
-            </button>
-            <button 
-              type="button"
-              onClick={() => onUpdateStatus(team.id, 'pause')}
-              className={`${btnPadding} transition-all ${team.status === 'pause' ? 'bg-amber-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-amber-400'}`}
-              aria-label="Marquer en pause"
-            >
-              <Coffee className={iconClassName} aria-hidden="true" />
-            </button>
-          </div>
+          <TeamRowStatusControls 
+            team={team} 
+            isCompact={isCompact} 
+            btnPadding={btnPadding} 
+            iconClassName={iconClassName} 
+            onUpdateStatus={onUpdateStatus} 
+          />
         )}
 
         {/* Note button */}

@@ -7,6 +7,8 @@ export const PHONETIC_ALPHABET: readonly string[] = [
   'X-ray', 'Yankee', 'Zulu'
 ] as const;
 
+const NUMBERED_TEAM_REGEX = /^(.+?)\s*(\d+)$/;
+
 export function getRoleDefaultSuggestion(role: TeamSpecialty, teams: Team[]): string {
   const existingNames = new Set(teams.map(t => t.name.trim().toLowerCase()));
 
@@ -39,7 +41,7 @@ export interface ParsedTeamName {
 
 export function parseTeamName(name: string): ParsedTeamName {
   const trimmed = name.trim();
-  const match = trimmed.match(/^(.*?)\s*(\d+)$/);
+  const match = NUMBERED_TEAM_REGEX.exec(trimmed);
   if (match) {
     const prefix = match[1].trim();
     const number = Number.parseInt(match[2], 10);
@@ -48,40 +50,20 @@ export function parseTeamName(name: string): ParsedTeamName {
   return { prefix: trimmed, number: null, isNumbered: false };
 }
 
-/**
- * Calcule la prochaine suggestion recommandée par défaut selon les règles :
- * 1. Si la dernière équipe créée a un numéro (ex: "Volante 1", "Alpha 2"), incrémenter ce numéro ("Volante 2", "Alpha 3").
- * 2. Si la dernière équipe créée n'a pas de numéro, suggérer la prochaine lettre de l'alphabet (Alpha -> Bravo -> Charlie ... -> Zulu).
- * 3. Si tout l'alphabet est épuisé, recommencer avec un numéro (Alpha 2, Bravo 2...).
- */
-export function getNextTeamSuggestion(teams: Team[]): string {
-  const existingNames = new Set(teams.map(t => t.name.trim().toLowerCase()));
-
-  if (teams.length === 0) {
-    return PHONETIC_ALPHABET[0];
+function getNextNumberedSuggestion(parsed: ParsedTeamName, existingNames: Set<string>): string {
+  let nextNum = (parsed.number ?? 0) + 1;
+  while (existingNames.has(`${parsed.prefix.toLowerCase()} ${nextNum}`)) {
+    nextNum++;
   }
+  return `${parsed.prefix} ${nextNum}`;
+}
 
-  // Dernière équipe ajoutée
-  const lastTeam = teams[teams.length - 1];
-  const parsed = parseTeamName(lastTeam.name);
-
-  // Cas 1 : L'équipe précédente possède un numéro -> continuer la suite numérique
-  if (parsed.isNumbered && parsed.number !== null) {
-    let nextNum = parsed.number + 1;
-    while (existingNames.has(`${parsed.prefix.toLowerCase()} ${nextNum}`)) {
-      nextNum++;
-    }
-    return `${parsed.prefix} ${nextNum}`;
-  }
-
-  // Cas 2 : L'équipe précédente est un nom simple sans numéro
-  // Vérifier si elle fait partie de l'alphabet phonétique
+function getNextPhoneticSuggestion(parsed: ParsedTeamName, existingNames: Set<string>): string | null {
   const phoneticIndex = PHONETIC_ALPHABET.findIndex(
     letter => letter.toLowerCase() === parsed.prefix.toLowerCase()
   );
 
   if (phoneticIndex >= 0) {
-    // Chercher la prochaine lettre non utilisée à partir de l'index suivant
     for (let offset = 1; offset < PHONETIC_ALPHABET.length; offset++) {
       const idx = (phoneticIndex + offset) % PHONETIC_ALPHABET.length;
       const candidate = PHONETIC_ALPHABET[idx];
@@ -90,16 +72,16 @@ export function getNextTeamSuggestion(teams: Team[]): string {
       }
     }
   } else {
-    // Si l'équipe précédente n'est pas phonétique, trouver la première lettre phonétique libre
     for (const candidate of PHONETIC_ALPHABET) {
       if (!existingNames.has(candidate.toLowerCase())) {
         return candidate;
       }
     }
   }
+  return null;
+}
 
-  // Cas 3 : Toutes les 26 lettres phonétiques de base sont déjà prises
-  // Générer des variantes numérotées (ex: Alpha 2, Bravo 2...)
+function getFallbackNumberedSuggestion(existingNames: Set<string>): string {
   let num = 2;
   while (num < 100) {
     for (const base of PHONETIC_ALPHABET) {
@@ -110,8 +92,34 @@ export function getNextTeamSuggestion(teams: Team[]): string {
     }
     num++;
   }
-
   return 'Volante 1';
+}
+
+/**
+ * Calcule la prochaine suggestion recommandée par défaut selon les règles :
+ * 1. Si la dernière équipe créée a un numéro (ex: "Volante 1", "Alpha 2"), incrémenter ce numéro ("Volante 2", "Alpha 3").
+ * 2. Si la dernière équipe créée n'a pas de numéro, suggérer la prochaine lettre de l'alphabet (Alpha -> Bravo -> Charlie ... -> Zulu).
+ * 3. Si tout l'alphabet est épuisé, recommencer avec un numéro (Alpha 2, Bravo 2...).
+ */
+export function getNextTeamSuggestion(teams: Team[]): string {
+  if (teams.length === 0) {
+    return PHONETIC_ALPHABET[0];
+  }
+
+  const existingNames = new Set(teams.map(t => t.name.trim().toLowerCase()));
+  const lastTeam = teams.at(-1)!;
+  const parsed = parseTeamName(lastTeam.name);
+
+  if (parsed.isNumbered && parsed.number !== null) {
+    return getNextNumberedSuggestion(parsed, existingNames);
+  }
+
+  const phoneticCandidate = getNextPhoneticSuggestion(parsed, existingNames);
+  if (phoneticCandidate) {
+    return phoneticCandidate;
+  }
+
+  return getFallbackNumberedSuggestion(existingNames);
 }
 
 /**
@@ -146,23 +154,11 @@ export function getTeamSuggestionsPool(teams: Team[]): string[] {
     vNum++;
   }
 
-  // 4. Variantes numérotées des équipes existantes
-  for (const t of teams) {
-    const { prefix } = parseTeamName(t.name);
-    let num = 2;
-    while (existingNames.has(`${prefix.toLowerCase()} ${num}`)) {
-      num++;
+  // 4. Variante numérotée de la première lettre phonétique disponible
+  for (let num = 2; num <= 5; num++) {
+    for (const base of PHONETIC_ALPHABET) {
+      pushCandidate(`${base} ${num}`);
     }
-    pushCandidate(`${prefix} ${num}`);
-  }
-
-  // 5. Variantes phonétiques numérotées restantes
-  for (const letter of PHONETIC_ALPHABET) {
-    let num = 2;
-    while (existingNames.has(`${letter.toLowerCase()} ${num}`)) {
-      num++;
-    }
-    pushCandidate(`${letter} ${num}`);
   }
 
   return pool;

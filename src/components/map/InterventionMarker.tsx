@@ -24,7 +24,7 @@ function calculateElapsed(createdAt: string): string {
   if (diffMins < 60) return `${diffMins}m`;
   const hours = Math.floor(diffMins / 60);
   const mins = diffMins % 60;
-  return `${hours}h${mins > 0 ? `${mins}m` : ''}`;
+  return mins > 0 ? `${hours}h${mins}m` : `${hours}h`;
 }
 
 function getInterventionZIndex(priority: string, isSelected: boolean): number {
