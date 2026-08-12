@@ -141,6 +141,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
             }
           }}
           onTeamUpdateStatus={actions.updateTeamStatus}
+          onTeamUpdateSpecialty={actions.updateTeamSpecialty}
           onTeamUpdateDescription={actions.updateTeamDescription}
           onZoneCreate={actions.addZone}
           onZoneUpdate={actions.updateZone}
@@ -258,6 +259,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           onUpdateColor={actions.updateTeamColor}
           onUpdateName={actions.updateTeamName}
           onUpdateStatus={actions.updateTeamStatus}
+          onUpdateSpecialty={actions.updateTeamSpecialty}
           onDeleteTeam={actions.deleteTeam}
           onMapUpload={actions.updateMapUrl}
           onDeleteZone={actions.deleteZone}

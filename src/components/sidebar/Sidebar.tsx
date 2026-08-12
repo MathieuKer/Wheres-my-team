@@ -1,7 +1,9 @@
-import { useState, useMemo, memo, useRef, useEffect } from 'react';
-import type { Team, TeamStatus, Zone, Intervention } from '../../types';
+import { useState, useReducer, useMemo, memo, useRef, useEffect } from 'react';
+import type { Team, TeamStatus, TeamSpecialty, Zone, Intervention } from '../../types';
 import { supabase } from '../../lib/supabase';
 import { parseZoneType } from '../../lib/utils';
+import { getNextTeamSuggestion, getTeamSuggestionsPool, getRoleDefaultSuggestion } from '../../lib/teamNaming';
+import { SPECIALTY_LIST, getSpecialtyConfig } from '../../lib/specialties';
 import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal, RotateCcw, Navigation, Clock, X, PlusCircle } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -11,6 +13,7 @@ interface TeamRowProps {
   onUpdateStatus: (id: string, status: TeamStatus) => void;
   onUpdateColor: (id: string, color: string) => void;
   onUpdateName: (id: string, name: string) => void;
+  onUpdateSpecialty?: (id: string, specialty: TeamSpecialty | null) => void;
   onUpdateDescription: (id: string, description: string | null) => void;
   setTeamToDelete: (team: Team) => void;
   isCompact?: boolean;
@@ -23,6 +26,7 @@ const TeamRow = memo(function TeamRow({
   onUpdateStatus,
   onUpdateColor,
   onUpdateName,
+  onUpdateSpecialty,
   onUpdateDescription,
   setTeamToDelete,
   isCompact = false,
@@ -88,6 +92,9 @@ const TeamRow = memo(function TeamRow({
     setIsEditing(false);
   };
 
+  const specialtyConfig = getSpecialtyConfig(team.specialty);
+  const RoleIcon = specialtyConfig.icon;
+
   return (
     <div 
       onContextMenu={handleContextMenu}
@@ -105,7 +112,14 @@ const TeamRow = memo(function TeamRow({
           )}
         </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-0 flex items-center gap-1.5">
+          <span 
+            className={`shrink-0 ${specialtyConfig.badgeText} opacity-80 group-hover/team:opacity-100 transition-opacity`}
+            title={`Rôle : ${specialtyConfig.label}`}
+          >
+            <RoleIcon className={isCompact ? 'w-3.5 h-3.5' : 'w-4 h-4'} />
+          </span>
+
           {isReadOnly ? (
             <span 
               className={`w-full text-slate-200 font-semibold font-display truncate block p-0 ${isCompact ? 'text-xs' : 'text-sm'}`}
@@ -118,7 +132,7 @@ const TeamRow = memo(function TeamRow({
               type="text"
               value={team.name}
               onChange={(e) => onUpdateName(team.id, e.target.value)}
-              className={`w-full bg-transparent border-none focus:ring-0 ${isCompact ? 'text-xs' : 'text-sm'} font-semibold text-slate-200 font-display p-0`}
+              className={`w-full bg-transparent border-none focus:ring-0 ${isCompact ? 'text-xs' : 'text-sm'} font-semibold text-slate-200 font-display p-0 min-w-0 truncate`}
               title={team.name}
             />
           )}
@@ -280,39 +294,68 @@ const TeamRow = memo(function TeamRow({
         <div 
           className="absolute bg-slate-950/95 border border-white/10 rounded-xl py-1 shadow-2xl z-[100] w-40 text-left font-display animate-in fade-in duration-100"
           style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
-          onPointerDown={(e) => e.stopPropagation()} // Stop propagation to avoid drag trigger
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <div className="px-3 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-white/5 mb-1">
             Changer statut
           </div>
           <button 
+            type="button"
             onClick={() => { onUpdateStatus(team.id, 'dispo'); setContextMenuPos(null); }}
             className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-400 font-semibold flex items-center gap-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            Disponible
+            <span>Disponible</span>
           </button>
           <button 
+            type="button"
             onClick={() => { onUpdateStatus(team.id, 'en_route'); setContextMenuPos(null); }}
             className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-blue-500/20 hover:text-blue-400 font-semibold flex items-center gap-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-            En direction
+            <span>En direction</span>
           </button>
           <button 
+            type="button"
             onClick={() => { onUpdateStatus(team.id, 'intervention'); setContextMenuPos(null); }}
             className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-red-500/20 hover:text-red-400 font-semibold flex items-center gap-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-            Intervention
+            <span>Intervention</span>
           </button>
           <button 
+            type="button"
             onClick={() => { onUpdateStatus(team.id, 'pause'); setContextMenuPos(null); }}
             className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-amber-500/20 hover:text-amber-400 font-semibold flex items-center gap-2"
           >
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-            En pause
+            <span>En pause</span>
           </button>
+
+          {onUpdateSpecialty && (
+            <>
+              <div className="px-3 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-t border-b border-white/5 my-1">
+                Changer Rôle
+              </div>
+              {SPECIALTY_LIST.map((spec) => {
+                const isCurrent = (team.specialty || 'terrain') === spec.id;
+                const SpecIcon = spec.icon;
+                return (
+                  <button
+                    key={spec.id}
+                    type="button"
+                    onClick={() => { onUpdateSpecialty(team.id, spec.id); setContextMenuPos(null); }}
+                    className={`w-full text-left px-3 py-1.5 text-xs font-semibold flex items-center gap-2 ${
+                      isCurrent ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                    }`}
+                  >
+                    <SpecIcon className="w-3 h-3 shrink-0" />
+                    <span>{spec.label}</span>
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -321,10 +364,11 @@ const TeamRow = memo(function TeamRow({
 
 interface SidebarProps {
   teams: Team[];
-  onAddTeam: (name: string, color: string) => Promise<void>;
+  onAddTeam: (name: string, color: string, specialty?: TeamSpecialty | null) => Promise<void>;
   onUpdateStatus: (id: string, status: TeamStatus) => void;
   onUpdateColor: (id: string, color: string) => void;
   onUpdateName: (id: string, name: string) => void;
+  onUpdateSpecialty?: (id: string, specialty: TeamSpecialty | null) => void;
   onDeleteTeam: (id: string) => void;
   onMapUpload: (url: string | null) => void;
   zones: Zone[];
@@ -348,7 +392,8 @@ export const Sidebar = memo(function Sidebar({
   onAddTeam, 
   onUpdateStatus, 
   onUpdateColor, 
-  onUpdateName,
+  onUpdateName, 
+  onUpdateSpecialty,
   onDeleteTeam, 
   onMapUpload,
   zones,
@@ -367,12 +412,14 @@ export const Sidebar = memo(function Sidebar({
 }: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
+  const [newSpecialty, setNewSpecialty] = useState<TeamSpecialty>('terrain');
+  const [selectedFilterSpecialty, setSelectedFilterSpecialty] = useState<TeamSpecialty | 'all'>('all');
   const [uploading, setUploading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
-  const [, setTick] = useState(0);
+  const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   useEffect(() => {
-    const interval = setInterval(() => setTick(t => t + 1), 15000);
+    const interval = setInterval(forceUpdate, 15000);
     return () => clearInterval(interval);
   }, []);
 
@@ -397,57 +444,14 @@ export const Sidebar = memo(function Sidebar({
   const [focusedSuggestionIndex, setFocusedSuggestionIndex] = useState(-1);
   const [hasUserEdited, setHasUserEdited] = useState(false);
 
-  // Alphabet phonétique international (NATO)
-  const PHONETIC_ALPHABET = useMemo(() => [
-    'Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel', 'India', 'Juliett',
-    'Kilo', 'Lima', 'Mike', 'November', 'Oscar', 'Papa', 'Quebec', 'Romeo', 'Sierra', 'Tango',
-    'Uniform', 'Victor', 'Whiskey', 'X-ray', 'Yankee', 'Zulu'
-  ], []);
-
-  // Équipes volantes par défaut
-  const VOLANTES = useMemo(() => [
-    'Volante 1', 'Volante 2', 'Volante 3', 'Volante 4', 'Volante 5'
-  ], []);
-
   // Génération dynamique du pool de suggestions basé sur les équipes existantes
   const suggestionsPool = useMemo(() => {
-    const existingNames = new Set(teams.map(t => t.name.trim().toLowerCase()));
-    const pool: string[] = [];
-
-    // Noms phonétiques (avec incrémentation si déjà pris)
-    for (const base of PHONETIC_ALPHABET) {
-      if (existingNames.has(base.toLowerCase())) {
-        let num = 2;
-        while (existingNames.has(`${base.toLowerCase()} ${num}`)) {
-          num++;
-        }
-        pool.push(`${base} ${num}`);
-      } else {
-        pool.push(base);
-      }
-    }
-
-    // Volantes (avec incrémentation si déjà prises)
-    for (const v of VOLANTES) {
-      if (!existingNames.has(v.toLowerCase())) {
-        pool.push(v);
-      }
-    }
-
-    let vNum = 1;
-    while (existingNames.has(`volante ${vNum}`)) {
-      vNum++;
-    }
-    if (vNum > 5) {
-      pool.push(`Volante ${vNum}`);
-    }
-
-    return pool;
-  }, [teams, PHONETIC_ALPHABET, VOLANTES]);
+    return getTeamSuggestionsPool(teams);
+  }, [teams]);
 
   const nextDefaultSuggestion = useMemo(() => {
-    return suggestionsPool[0] || '';
-  }, [suggestionsPool]);
+    return getNextTeamSuggestion(teams);
+  }, [teams]);
 
   // Pré-remplit automatiquement le champ lorsqu'il n'a pas été modifié par l'utilisateur
   useEffect(() => {
@@ -555,6 +559,11 @@ export const Sidebar = memo(function Sidebar({
     return [...teams].sort((a, b) => a.name.localeCompare(b.name));
   }, [teams]);
 
+  const displayedTeams = useMemo(() => {
+    if (selectedFilterSpecialty === 'all') return sortedTeams;
+    return sortedTeams.filter(t => (t.specialty || 'terrain') === selectedFilterSpecialty);
+  }, [sortedTeams, selectedFilterSpecialty]);
+
   const sortedZones = useMemo(() => {
     return [...zones].sort((a, b) => (a.name || '').localeCompare(b.name || ''));
   }, [zones]);
@@ -571,7 +580,7 @@ export const Sidebar = memo(function Sidebar({
 
     setIsAdding(true);
     try {
-      await onAddTeam(cleanName, newColor);
+      await onAddTeam(cleanName, newColor, newSpecialty);
       setNewName('');
       setHasUserEdited(false);
     } catch (err) {
@@ -670,6 +679,44 @@ export const Sidebar = memo(function Sidebar({
               </div>
             )}
           </div>
+
+          {/* Sélecteur de Rôle / Spécialité */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 font-display">
+              Rôle / Spécialité
+            </span>
+            <div className="grid grid-cols-5 gap-1">
+              {SPECIALTY_LIST.map((spec) => {
+                const isSelected = newSpecialty === spec.id;
+                const SpecIcon = spec.icon;
+                return (
+                  <button
+                    key={spec.id}
+                    type="button"
+                    onClick={() => {
+                      setNewSpecialty(spec.id);
+                      if (spec.id !== 'kart') {
+                        setNewColor(spec.defaultColor);
+                      }
+                      if (!hasUserEdited) {
+                        setNewName(getRoleDefaultSuggestion(spec.id, teams));
+                      }
+                    }}
+                    className={`py-1.5 px-0.5 rounded-xl text-[9px] font-bold border transition-all flex flex-col items-center justify-center gap-0.5 ${
+                      isSelected 
+                        ? `${spec.badgeBg} ${spec.badgeText} ${spec.badgeBorder} ring-1 ring-white/30 shadow-md` 
+                        : 'bg-white/5 border-white/5 text-slate-400 hover:text-slate-200 hover:bg-white/10'
+                    }`}
+                    title={`${spec.label} : ${spec.description}`}
+                  >
+                    <SpecIcon className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate text-center w-full leading-tight font-display">{spec.shortLabel}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="flex gap-2 relative focus-within:z-[60]">
             <div className="h-10 w-[20%] bg-white/5 border border-white/10 rounded-xl flex items-center justify-center shrink-0">
               <ColorPicker color={newColor} onChange={setNewColor} />
@@ -962,37 +1009,81 @@ export const Sidebar = memo(function Sidebar({
       {/* Liste Équipes - Visible en mode déploiement ou en mode lecteur */}
       {(mode === 'deployment' || mode === 'reader') && (
         <div className="flex flex-col gap-3">
-        <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex justify-between items-center font-display w-full">
-          <span>Unités sur le terrain ({teams.length})</span>
-          <div className="flex gap-1.5 items-center">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 flex justify-between items-center font-display w-full">
+            <span>Unités sur le terrain ({teams.length})</span>
+            <div className="flex gap-1.5 items-center">
+              <button
+                type="button"
+                onClick={() => setIsCompact(prev => !prev)}
+                className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold transition-all ${
+                  isCompact 
+                    ? 'bg-blue-600/20 border-blue-500/30 text-blue-400' 
+                    : 'bg-white/5 border-white/5 text-slate-400 hover:text-white'
+                }`}
+              >
+                {isCompact ? 'Mode normal' : 'Mode compact'}
+              </button>
+            </div>
+          </div>
+
+          {/* Filtres 1-clic par rôle */}
+          <div className="flex gap-1 overflow-x-auto pb-1 custom-scrollbar no-scrollbar py-0.5">
             <button
               type="button"
-              onClick={() => setIsCompact(prev => !prev)}
-              className={`text-[10px] px-2 py-0.5 rounded-md border font-semibold transition-all ${
-                isCompact 
-                  ? 'bg-blue-600/20 border-blue-500/30 text-blue-400' 
-                  : 'bg-white/5 border-white/5 text-slate-400 hover:text-white'
+              onClick={() => setSelectedFilterSpecialty('all')}
+              className={`px-2.5 py-1 rounded-lg text-[10px] font-bold border shrink-0 transition-all ${
+                selectedFilterSpecialty === 'all'
+                  ? 'bg-white/20 border-white/40 text-white shadow-sm'
+                  : 'bg-white/5 border-white/5 text-slate-400 hover:text-slate-200'
               }`}
             >
-              {isCompact ? 'Mode normal' : 'Mode compact'}
+              Tous ({teams.length})
             </button>
+            {SPECIALTY_LIST.map((spec) => {
+              const count = teams.filter(t => (t.specialty || 'terrain') === spec.id).length;
+              const isAct = selectedFilterSpecialty === spec.id;
+              const SpecIcon = spec.icon;
+              return (
+                <button
+                  key={spec.id}
+                  type="button"
+                  onClick={() => setSelectedFilterSpecialty(isAct ? 'all' : spec.id)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border shrink-0 flex items-center gap-1 transition-all ${
+                    isAct
+                      ? `${spec.badgeBg} ${spec.badgeText} ${spec.badgeBorder} shadow-sm`
+                      : 'bg-white/5 border-white/5 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <SpecIcon className="w-3 h-3 shrink-0" />
+                  <span>{spec.shortLabel}</span>
+                  <span className="text-[9px] opacity-75">({count})</span>
+                </button>
+              );
+            })}
           </div>
+
+          {displayedTeams.length === 0 && (
+            <div className="p-4 text-center glass-card rounded-xl border border-white/5">
+              <p className="text-slate-400 text-xs italic">Aucune unité dans cette catégorie.</p>
+            </div>
+          )}
+
+          {displayedTeams.map(team => (
+             <TeamRow 
+               key={team.id}
+               team={team}
+               onUpdateStatus={onUpdateStatus}
+               onUpdateColor={onUpdateColor}
+               onUpdateName={onUpdateName}
+               onUpdateSpecialty={onUpdateSpecialty}
+               onUpdateDescription={onUpdateDescription}
+               setTeamToDelete={setTeamToDelete}
+               isCompact={isCompact}
+               isReadOnly={mode === 'reader'}
+               onTeamsMove={onTeamsMove}
+             />
+          ))}
         </div>
-        {sortedTeams.map(team => (
-           <TeamRow 
-             key={team.id}
-             team={team}
-             onUpdateStatus={onUpdateStatus}
-             onUpdateColor={onUpdateColor}
-             onUpdateName={onUpdateName}
-             onUpdateDescription={onUpdateDescription}
-             setTeamToDelete={setTeamToDelete}
-             isCompact={isCompact}
-             isReadOnly={mode === 'reader'}
-             onTeamsMove={onTeamsMove}
-           />
-        ))}
-      </div>
       )}
 
       {/* Liste Interventions - Visible en mode déploiement ou en mode lecteur */}

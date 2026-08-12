@@ -1,5 +1,7 @@
 export type TeamStatus = 'dispo' | 'intervention' | 'pause' | 'en_route';
 
+export type TeamSpecialty = 'terrain' | 'volante' | 'superviseur' | 'coordo' | 'kart';
+
 export interface Team {
   id: string;
   map_id: string;
@@ -8,6 +10,7 @@ export interface Team {
   pos_x: number;
   pos_y: number;
   status: TeamStatus;
+  specialty?: TeamSpecialty | null;
   description?: string | null;
   updated_at: string;
 }

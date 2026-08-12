@@ -2,6 +2,7 @@ import { useRef, useState, memo } from 'react';
 import type { Team } from '../../types';
 import { AlertTriangle, MapPin, Navigation } from 'lucide-react';
 import { getAbbreviation, handleMarkerDrag } from '../../lib/utils';
+import { getSpecialtyConfig } from '../../lib/specialties';
 
 interface TeamMarkerProps {
   team: Team;
@@ -25,17 +26,19 @@ function getZIndex(isHovered: boolean, isSelected: boolean, status: string): num
 export const TeamMarker = memo(function TeamMarker({ 
   team, 
   onDoubleClick, 
-  onDragStart,
-  onDragMove,
+  onDragStart, 
+  onDragMove, 
   onDragEnd, 
-  isDraggable = true,
-  zoomScale = 1,
-  isSelected = false,
-  mode = 'reader',
-  onConfigure
+  isDraggable = true, 
+  zoomScale = 1, 
+  isSelected = false, 
+  mode = 'reader', 
+  onConfigure 
 }: Readonly<TeamMarkerProps>) {
   const [isHovered, setIsHovered] = useState(false);
   const lastClickTimeRef = useRef<number>(0);
+  const specialtyConfig = getSpecialtyConfig(team.specialty);
+  const RoleIcon = specialtyConfig.icon;
 
   const style: React.CSSProperties = {
     position: 'absolute',
@@ -70,6 +73,10 @@ export const TeamMarker = memo(function TeamMarker({
     iconClass += " drop-shadow-[0_0_10px_#3b82f6]";
   }
 
+  // Coordo contrast ring
+  const isCoordo = team.specialty === 'coordo';
+  const isVehicle = specialtyConfig.shape === 'squircle';
+
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!isDraggable) return;
     if (e.button !== 0) return; 
@@ -97,11 +104,13 @@ export const TeamMarker = memo(function TeamMarker({
     ? 'top-[115%] bottom-auto translate-y-[-8px] group-hover/outer:translate-y-0'
     : 'bottom-[110%] top-auto translate-y-2 group-hover/outer:translate-y-0';
 
-  const tooltipWidthClass = team.description ? 'w-48 whitespace-normal text-left' : 'whitespace-nowrap';
+  const tooltipWidthClass = team.description ? 'w-52 whitespace-normal text-left' : 'whitespace-nowrap';
 
   const badgeSelectionClass = isSelected 
     ? 'bg-blue-600 text-white border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.4)] scale-105' 
-    : 'bg-white text-slate-900 border-slate-200 shadow-sm';
+    : 'bg-slate-900/90 text-white border-white/20 shadow-md backdrop-blur-sm';
+
+  const badgeShapeClass = isVehicle ? 'rounded-lg' : 'rounded-full';
 
   return (
     <div 
@@ -145,35 +154,45 @@ export const TeamMarker = memo(function TeamMarker({
           </div>
         )}
 
-        {/* Name Tooltip (visible on hover) */}
+        {/* Name & Specialty Tooltip (visible on hover) */}
         <div 
-          className={`absolute mb-1 text-[11px] px-3 py-1.5 rounded-2xl shadow-2xl opacity-0 group-hover/outer:opacity-100 transition-all duration-300 border border-white/20 z-20 pointer-events-none font-display flex flex-col gap-0.5 ${tooltipPlacementClass} ${tooltipWidthClass}`}
+          className={`absolute mb-1 text-[11px] px-3 py-2 rounded-2xl shadow-2xl opacity-0 group-hover/outer:opacity-100 transition-all duration-300 border border-white/20 z-20 pointer-events-none font-display flex flex-col gap-1 ${tooltipPlacementClass} ${tooltipWidthClass}`}
           style={{ 
             backgroundColor: `${team.color}f0`, 
             color: '#fff',
             boxShadow: `0 10px 15px -3px ${team.color}44`
           }}
         >
-          <span className="font-bold">{team.name}</span>
+          <div className="flex items-center justify-between gap-2 border-b border-white/20 pb-1">
+            <span className="font-bold">{team.name}</span>
+            <span className="text-[9px] uppercase tracking-wider font-semibold opacity-90 flex items-center gap-1">
+              <RoleIcon className="w-2.5 h-2.5" />
+              {specialtyConfig.shortLabel}
+            </span>
+          </div>
           {team.description ? (
-            <span className="text-[10px] text-white/90 border-t border-white/10 pt-0.5 mt-0.5 font-normal block leading-tight break-words">
+            <span className="text-[10px] text-white/90 font-normal block leading-tight break-words">
               {team.description}
             </span>
           ) : null}
         </div>
         
-        <MapPin 
-          className={`w-8 h-8 md:w-11 md:h-11 ${iconClass} filter drop-shadow-lg relative z-10`} 
-          style={{ fill: pinFill, color: pinStroke, strokeWidth: 2.5 }} 
-          aria-hidden="true"
-        />
+        {/* Pin or Squircle Visual */}
+        <div className={`relative flex items-center justify-center ${isCoordo ? 'rounded-full ring-2 ring-white/80 shadow-[0_0_12px_rgba(255,255,255,0.5)]' : ''}`}>
+          <MapPin 
+            className={`w-8 h-8 md:w-11 md:h-11 ${iconClass} filter drop-shadow-lg relative z-10`} 
+            style={{ fill: pinFill, color: pinStroke, strokeWidth: 2.5 }} 
+            aria-hidden="true"
+          />
+        </div>
 
-        {/* Permanent Abbreviation Badge */}
+        {/* Permanent Abbreviation & Role Badge */}
         <div 
-          className={`absolute top-[85%] left-1/2 -translate-x-1/2 mt-0.5 text-[7px] md:text-[9px] font-black leading-none px-1.5 py-0.5 md:px-2 md:py-1 rounded-full shadow-lg whitespace-nowrap border pointer-events-none z-10 font-display transition-all ${badgeSelectionClass}`}
+          className={`absolute top-[85%] left-1/2 -translate-x-1/2 mt-0.5 text-[7px] md:text-[9px] font-black leading-none px-1.5 py-0.5 md:px-2 md:py-1 ${badgeShapeClass} shadow-lg whitespace-nowrap border pointer-events-none z-10 font-display transition-all flex items-center gap-1 ${badgeSelectionClass}`}
           style={{ boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06)' }}
         >
-          {getAbbreviation(team.name)}
+          <RoleIcon className="w-2.5 h-2.5 md:w-3 md:h-3 text-white" />
+          <span>{getAbbreviation(team.name)}</span>
         </div>
       </div>
     </div>

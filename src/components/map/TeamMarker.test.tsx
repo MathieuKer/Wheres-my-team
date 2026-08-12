@@ -58,7 +58,20 @@ describe('TeamMarker Component', () => {
   it('highlights badge when team is selected', () => {
     renderWithProviders(<TeamMarker {...defaultProps} isSelected={true} />);
 
-    const badge = screen.getByText('AB');
+    const badge = screen.getByText('AB').parentElement!;
     expect(badge.className).toContain('bg-blue-600');
+  });
+
+  it('renders role information for specialized teams', () => {
+    const volanteTeam: Team = {
+      ...mockTeam,
+      name: 'Volante 1',
+      specialty: 'volante',
+      color: '#ef4444'
+    };
+
+    renderWithProviders(<TeamMarker {...defaultProps} team={volanteTeam} />);
+    expect(screen.getByText('V1')).toBeInTheDocument();
+    expect(screen.getByText('Volante')).toBeInTheDocument();
   });
 });

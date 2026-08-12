@@ -4,7 +4,7 @@ import { teamsRepo } from '../lib/repositories/teams';
 import { mapRepo } from '../lib/repositories/map';
 import { zoneRepo } from '../lib/repositories/zones';
 import { interventionsRepo } from '../lib/repositories/interventions';
-import type { TeamStatus, Zone, SquadMap, Intervention } from '../types';
+import type { TeamStatus, TeamSpecialty, Zone, SquadMap, Intervention } from '../types';
 
 /**
  * Orchestrateur de domaine "SquadMap".
@@ -48,16 +48,22 @@ export function useSquadMap(mapId: string | null) {
     };
   }, [mapId]);
 
-  const addTeam = useCallback(async (name: string, color: string) => {
+  const addTeam = useCallback(async (name: string, color: string, specialty?: TeamSpecialty | null) => {
     if (isAdding || !mapId) return;
     setIsAdding(true);
     try {
-      await teamsRepo.create(mapId, name, color);
+      await teamsRepo.create(mapId, name, color, specialty);
       mutate(['teams', mapId]);
     } finally {
       setIsAdding(false);
     }
   }, [mapId, isAdding]);
+
+  const updateTeamSpecialty = useCallback(async (id: string, specialty: TeamSpecialty | null) => {
+    if (!mapId) return;
+    mutate(['teams', mapId], teams.map(t => t.id === id ? { ...t, specialty } : t), false);
+    await teamsRepo.update(id, { specialty });
+  }, [mapId, teams]);
 
   const updateTeamPosition = useCallback(async (id: string, x: number, y: number) => {
     if (!mapId) return;
@@ -261,6 +267,7 @@ export function useSquadMap(mapId: string | null) {
 
   const memoizedActions = useMemo(() => ({
     addTeam,
+    updateTeamSpecialty,
     updateTeamPosition,
     updateTeamsPositions,
     updateTeamColor,
@@ -282,6 +289,7 @@ export function useSquadMap(mapId: string | null) {
     setMode
   }), [
     addTeam,
+    updateTeamSpecialty,
     updateTeamPosition,
     updateTeamsPositions,
     updateTeamColor,

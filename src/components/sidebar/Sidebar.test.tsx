@@ -143,4 +143,59 @@ describe('Sidebar Component', () => {
     expect(screen.queryByText('Administration des Interventions')).not.toBeInTheDocument();
     expect(screen.queryByText(/Interventions en cours/)).not.toBeInTheDocument();
   });
+
+  it('automatically suggests the next phonetic letter or numbered increment in deployment mode', async () => {
+    const singleAlphaTeam = [
+      { id: 't1', name: 'Alpha', color: '#3b82f6', status: 'dispo' as const, pos_x: 20, pos_y: 30, map_id: 'm1', updated_at: '', description: null }
+    ];
+
+    await act(async () => {
+      renderWithProviders(<Sidebar {...mockProps} teams={singleAlphaTeam} mode="deployment" />);
+    });
+
+    // After Alpha, next recommendation input value must be Bravo
+    const addTeamInput = screen.getByPlaceholderText('Ex: Unité Alpha…') as HTMLInputElement;
+    expect(addTeamInput.value).toBe('Bravo');
+  });
+
+  it('automatically increments numbered teams like Volante 1 to Volante 2', async () => {
+    const volanteTeam = [
+      { id: 't1', name: 'Volante 1', color: '#3b82f6', status: 'dispo' as const, pos_x: 20, pos_y: 30, map_id: 'm1', updated_at: '', description: null }
+    ];
+
+    await act(async () => {
+      renderWithProviders(<Sidebar {...mockProps} teams={volanteTeam} mode="deployment" />);
+    });
+
+    const addTeamInput = screen.getByPlaceholderText('Ex: Unité Alpha…') as HTMLInputElement;
+    expect(addTeamInput.value).toBe('Volante 2');
+  });
+
+  it('allows filtering teams by operational role', async () => {
+    const mixedTeams: Team[] = [
+      { id: 't1', name: 'Alpha', color: '#3b82f6', status: 'dispo', pos_x: 10, pos_y: 10, map_id: 'm1', updated_at: '', specialty: 'terrain' },
+      { id: 't2', name: 'Volante 1', color: '#ef4444', status: 'dispo', pos_x: 20, pos_y: 20, map_id: 'm1', updated_at: '', specialty: 'volante' },
+      { id: 't3', name: 'Superviseur Ouest', color: '#10b981', status: 'dispo', pos_x: 30, pos_y: 30, map_id: 'm1', updated_at: '', specialty: 'superviseur' },
+    ];
+
+    await act(async () => {
+      renderWithProviders(<Sidebar {...mockProps} teams={mixedTeams} mode="deployment" />);
+    });
+
+    // Check filter buttons with specific count
+    const volanteFilterBtn = screen.getByRole('button', { name: /Volante\s*\(1\)/i });
+    expect(volanteFilterBtn).toBeInTheDocument();
+
+    // Click Volante filter
+    await act(async () => {
+      volanteFilterBtn.click();
+    });
+
+    // Only Volante 1 should be listed in the inputs
+    const nameInputs = screen.getAllByRole('textbox') as HTMLInputElement[];
+    const inputValues = nameInputs.map(i => i.value);
+    expect(inputValues).toContain('Volante 1');
+    expect(inputValues).not.toContain('Alpha');
+    expect(inputValues).not.toContain('Superviseur Ouest');
+  });
 });
