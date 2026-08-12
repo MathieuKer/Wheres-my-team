@@ -1,13 +1,14 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
-import type { Team, Zone, TeamStatus, Intervention, InterventionPriority } from '../../types';
+import type { Team, Zone, TeamStatus, TeamSpecialty, Intervention, InterventionPriority } from '../../types';
 import { TeamMarker } from './TeamMarker';
 import { ZoneElement } from './ZoneElement';
 import { ZoneContent } from './ZoneContent';
 import { InterventionMarker } from './InterventionMarker';
 import { MapIcon, MousePointer2, ZoomIn, ZoomOut, Maximize, Lock, Unlock, Eye, EyeOff, X, RotateCcw, Trash2, ShieldAlert, Check, HelpCircle } from 'lucide-react';
 import { getZoneStyle } from '../../lib/utils';
+import { SPECIALTY_LIST, getSpecialtyConfig } from '../../lib/specialties';
 
 interface MapContainerProps {
   mapUrl: string | null;
@@ -19,6 +20,7 @@ interface MapContainerProps {
   onTeamsMove: (moves: { id: string; x: number; y: number }[]) => void;
   onTeamDoubleClick: (id: string, currentStatus: TeamStatus) => void;
   onTeamUpdateStatus?: (id: string, status: TeamStatus) => void;
+  onTeamUpdateSpecialty?: (id: string, specialty: TeamSpecialty | null) => void;
   onTeamUpdateDescription?: (id: string, description: string | null) => void;
   onZoneCreate: (zone: Omit<Zone, 'id' | 'map_id' | 'created_at'>) => void;
   onZoneUpdate: (id: string, updates: Partial<Zone>) => void;
@@ -37,6 +39,7 @@ const TeamConfigModal = ({
   team, 
   onClose, 
   onUpdateStatus, 
+  onUpdateSpecialty,
   onUpdateDescription, 
   onTeamsMove, 
   mode 
@@ -44,6 +47,7 @@ const TeamConfigModal = ({
   team: Team; 
   onClose: () => void; 
   onUpdateStatus?: (id: string, status: TeamStatus) => void;
+  onUpdateSpecialty?: (id: string, specialty: TeamSpecialty | null) => void;
   onUpdateDescription?: (id: string, description: string | null) => void;
   onTeamsMove?: (moves: { id: string; x: number; y: number }[]) => void;
   mode: string;
@@ -136,6 +140,46 @@ const TeamConfigModal = ({
                     }`}
                   >
                     {s.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        {/* Rôle / Spécialité */}
+        <div className="mb-4">
+          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+            Rôle / Spécialité
+          </span>
+          {isReadOnly ? (
+            <div className="flex items-center gap-2 text-xs font-bold text-slate-300">
+              <span className={`text-[10px] uppercase font-bold px-2 py-1 rounded-lg border flex items-center gap-1.5 ${getSpecialtyConfig(team.specialty).badgeBg} ${getSpecialtyConfig(team.specialty).badgeText} ${getSpecialtyConfig(team.specialty).badgeBorder}`}>
+                {(() => {
+                  const RoleIcon = getSpecialtyConfig(team.specialty).icon;
+                  return <RoleIcon className="w-3.5 h-3.5" />;
+                })()}
+                {getSpecialtyConfig(team.specialty).label}
+              </span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-1.5">
+              {SPECIALTY_LIST.map((spec) => {
+                const isCurrent = (team.specialty || 'terrain') === spec.id;
+                const RoleIcon = spec.icon;
+                return (
+                  <button
+                    key={spec.id}
+                    type="button"
+                    onClick={() => { if (onUpdateSpecialty) onUpdateSpecialty(team.id, spec.id); }}
+                    className={`py-1.5 px-2 text-[11px] font-bold rounded-lg border text-left flex items-center gap-1.5 transition-all ${
+                      isCurrent 
+                        ? `${spec.badgeBg} ${spec.badgeText} ${spec.badgeBorder} shadow-sm` 
+                        : 'bg-white/5 border-white/5 text-slate-400 hover:bg-white/10 hover:text-slate-200'
+                    }`}
+                  >
+                    <RoleIcon className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">{spec.shortLabel}</span>
                   </button>
                 );
               })}
@@ -506,6 +550,7 @@ export function MapContainer({
   onTeamsMove, 
   onTeamDoubleClick,
   onTeamUpdateStatus,
+  onTeamUpdateSpecialty,
   onTeamUpdateDescription,
   onZoneCreate,
   onZoneUpdate,
@@ -1229,6 +1274,7 @@ export function MapContainer({
             mode={mode}
             onClose={() => setConfiguringTeamId(null)}
             onUpdateStatus={onTeamUpdateStatus}
+            onUpdateSpecialty={onTeamUpdateSpecialty}
             onUpdateDescription={onTeamUpdateDescription}
             onTeamsMove={onTeamsMove}
           />

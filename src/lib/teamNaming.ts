@@ -1,4 +1,4 @@
-import type { Team } from '../types';
+import type { Team, TeamSpecialty } from '../types';
 
 export const PHONETIC_ALPHABET: readonly string[] = [
   'Alpha', 'Bravo', 'Charlie', 'Delta', 'Echo', 'Foxtrot', 'Golf', 'Hotel',
@@ -6,6 +6,30 @@ export const PHONETIC_ALPHABET: readonly string[] = [
   'Quebec', 'Romeo', 'Sierra', 'Tango', 'Uniform', 'Victor', 'Whiskey',
   'X-ray', 'Yankee', 'Zulu'
 ] as const;
+
+export function getRoleDefaultSuggestion(role: TeamSpecialty, teams: Team[]): string {
+  const existingNames = new Set(teams.map(t => t.name.trim().toLowerCase()));
+
+  if (role === 'terrain') {
+    return getNextTeamSuggestion(teams);
+  }
+
+  const prefixMap: Record<TeamSpecialty, string> = {
+    terrain: 'Alpha',
+    volante: 'Volante',
+    superviseur: 'Superviseur',
+    coordo: 'Coordo',
+    kart: 'Kart'
+  };
+
+  const prefix = prefixMap[role] || 'Unité';
+
+  let num = 1;
+  while (existingNames.has(`${prefix.toLowerCase()} ${num}`)) {
+    num++;
+  }
+  return `${prefix} ${num}`;
+}
 
 export interface ParsedTeamName {
   prefix: string;

@@ -48,11 +48,15 @@ CREATE TABLE public.teams (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   name TEXT NOT NULL,
   color TEXT NOT NULL DEFAULT '#3b82f6',
+  specialty TEXT DEFAULT 'terrain',
   pos_x FLOAT NOT NULL DEFAULT 50.0,
   pos_y FLOAT NOT NULL DEFAULT 50.0,
   status TEXT NOT NULL DEFAULT 'dispo' CHECK (status IN ('dispo', 'intervention', 'pause')),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
+
+-- Migration existante (si la table existe déjà) :
+-- ALTER TABLE public.teams ADD COLUMN IF NOT EXISTS specialty TEXT DEFAULT 'terrain';
 
 -- 2. Table pour les cartes (maps)
 CREATE TABLE public.maps (

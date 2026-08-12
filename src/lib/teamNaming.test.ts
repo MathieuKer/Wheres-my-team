@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getNextTeamSuggestion, getTeamSuggestionsPool, parseTeamName, PHONETIC_ALPHABET } from './teamNaming';
+import { getNextTeamSuggestion, getTeamSuggestionsPool, parseTeamName, PHONETIC_ALPHABET, getRoleDefaultSuggestion } from './teamNaming';
 import type { Team } from '../types';
 
 function createMockTeam(name: string, id: string = name): Team {
@@ -110,6 +110,25 @@ describe('teamNaming utility', () => {
       expect(pool).toContain('Volante 2');
       // Contains Alpha 2 variant
       expect(pool).toContain('Alpha 2');
+    });
+  });
+
+  describe('getRoleDefaultSuggestion', () => {
+    it('suggests phonetic progression for terrain role', () => {
+      const teams = [createMockTeam('Alpha')];
+      expect(getRoleDefaultSuggestion('terrain', teams)).toBe('Bravo');
+    });
+
+    it('suggests Volante with incremented number', () => {
+      const teams = [createMockTeam('Volante 1')];
+      expect(getRoleDefaultSuggestion('volante', teams)).toBe('Volante 2');
+    });
+
+    it('suggests Superviseur, Coordo and Kart starting from 1', () => {
+      const teams: Team[] = [];
+      expect(getRoleDefaultSuggestion('superviseur', teams)).toBe('Superviseur 1');
+      expect(getRoleDefaultSuggestion('coordo', teams)).toBe('Coordo 1');
+      expect(getRoleDefaultSuggestion('kart', teams)).toBe('Kart 1');
     });
   });
 });
