@@ -13,6 +13,7 @@ export interface Team {
   specialty?: TeamSpecialty | null;
   description?: string | null;
   updated_at: string;
+  created_at?: string;
 }
 
 export interface SquadMap {
@@ -22,6 +23,7 @@ export interface SquadMap {
   image_url: string | null;
   has_interventions?: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface Zone {
@@ -40,6 +42,7 @@ export interface Zone {
   font_size?: number;
   opacity?: number;
   created_at: string;
+  updated_at?: string;
 }
 
 export type InterventionPriority = 'P0' | 'P1' | 'P3' | 'P5';
@@ -55,4 +58,5 @@ export interface Intervention {
   pos_y: number;
   assigned_team_id: string | null;
   created_at: string;
+  updated_at?: string;
 }

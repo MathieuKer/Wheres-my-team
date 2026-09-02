@@ -1094,6 +1094,7 @@ export function MapContainer({
                   onDragMove={handleDragMove}
                   onDragEnd={handleDragEnd}
                   onConfigure={() => setConfiguringTeamId(team.id)}
+                  onUpdateStatus={(status) => onTeamUpdateStatus?.(team.id, status)}
                 />
               );
             })}

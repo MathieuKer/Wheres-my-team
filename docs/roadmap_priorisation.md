@@ -9,8 +9,8 @@ Ce document centralise les fonctionnalités et améliorations ergonomiques reten
 ```mermaid
 graph TD
     subgraph P1 [🔥 Priorité 1 - Immédiat & Haute Valeur]
-        F09["[F-09] 🏷️ Tags & Spécialités d'Équipes (EN COURS)"]
-        E06["[E-06] 🎯 Menu Radial / Roue Rapide (PC & Tactile)"]
+        F09["[F-09] 🏷️ Tags & Spécialités d'Équipes (TERMINÉ ✅)"]
+        E06["[E-06] 🎯 Menu Radial / Roue Rapide (TERMINÉ ✅)"]
         F06["[F-06] 🔄 Annulation Rapide Ctrl+Z (Undo)"]
         F05["[F-05] 📊 Compteur de Synthèse en En-tête"]
     end

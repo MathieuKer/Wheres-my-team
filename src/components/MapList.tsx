@@ -14,7 +14,7 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
   const [loading, setLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [newMapName, setNewMapName] = useState('');
-  const [hasInterventions, setHasInterventions] = useState(true);
+  const [hasInterventions, setHasInterventions] = useState(false);
   const [mapToDelete, setMapToDelete] = useState<SquadMap | null>(null);
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function MapList({ onSelectMap, signOut }: Readonly<MapListProps>) {
     try {
       await mapRepo.create(newMapName.trim(), hasInterventions);
       setNewMapName('');
-      setHasInterventions(true);
+      setHasInterventions(false);
     } catch (err) {
       console.error(err);
       alert("Erreur lors de la création de la carte.");

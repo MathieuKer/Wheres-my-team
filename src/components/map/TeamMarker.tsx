@@ -1,8 +1,9 @@
-import { useRef, useState, memo } from 'react';
-import type { Team } from '../../types';
+import { useRef, useState, useEffect, memo } from 'react';
+import type { Team, TeamStatus } from '../../types';
 import { AlertTriangle, MapPin, Navigation } from 'lucide-react';
 import { getAbbreviation, handleMarkerDrag } from '../../lib/utils';
 import { getSpecialtyConfig } from '../../lib/specialties';
+import { RadialMenu } from './RadialMenu';
 
 interface TeamMarkerProps {
   team: Team;
@@ -15,9 +16,11 @@ interface TeamMarkerProps {
   isSelected?: boolean;
   mode?: 'reader' | 'deployment' | 'edition';
   onConfigure: () => void;
+  onUpdateStatus?: (status: TeamStatus) => void;
 }
 
-function getZIndex(isHovered: boolean, isSelected: boolean, status: string): number {
+function getZIndex(isHovered: boolean, isSelected: boolean, status: string, isRadialOpen: boolean): number {
+  if (isRadialOpen) return 99999;
   if (isHovered) return 800;
   if (isSelected) return 500;
   return status === 'intervention' ? 50 : 10;
@@ -33,12 +36,26 @@ export const TeamMarker = memo(function TeamMarker({
   zoomScale = 1, 
   isSelected = false, 
   mode = 'reader', 
-  onConfigure 
+  onConfigure,
+  onUpdateStatus
 }: Readonly<TeamMarkerProps>) {
-  const [isHovered, setIsHovered] = useState(false);
+  const [hoveredStatus, setIsHovered] = useState(false);
+  const [isRadialOpen, setIsRadialOpen] = useState(false);
   const lastClickTimeRef = useRef<number>(0);
+  const rightClickPressTimeRef = useRef<number>(0);
+  const isHoldingRightClickRef = useRef<boolean>(false);
+  const didOpenRadialRef = useRef<boolean>(false);
+  const radialTriggerTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchLongPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const specialtyConfig = getSpecialtyConfig(team.specialty);
   const RoleIcon = specialtyConfig.icon;
+
+  useEffect(() => {
+    return () => {
+      if (radialTriggerTimerRef.current) clearTimeout(radialTriggerTimerRef.current);
+      if (touchLongPressTimerRef.current) clearTimeout(touchLongPressTimerRef.current);
+    };
+  }, []);
 
   const style: React.CSSProperties = {
     position: 'absolute',
@@ -46,7 +63,7 @@ export const TeamMarker = memo(function TeamMarker({
     top: `${team.pos_y}%`,
     transform: `translate(-50%, -100%) scale(${1 / zoomScale})`,
     transformOrigin: 'bottom center',
-    zIndex: getZIndex(isHovered, isSelected, team.status),
+    zIndex: getZIndex(hoveredStatus, isSelected, team.status, isRadialOpen),
     cursor: isDraggable ? 'grab' : 'default',
     touchAction: 'none',
   };
@@ -78,6 +95,49 @@ export const TeamMarker = memo(function TeamMarker({
   const isVehicle = specialtyConfig.shape === 'squircle';
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button === 2) {
+      if (mode === 'reader') return;
+      e.stopPropagation();
+      rightClickPressTimeRef.current = Date.now();
+      isHoldingRightClickRef.current = true;
+      didOpenRadialRef.current = false;
+
+      radialTriggerTimerRef.current = setTimeout(() => {
+        if (isHoldingRightClickRef.current) {
+          didOpenRadialRef.current = true;
+          setIsRadialOpen(true);
+        }
+      }, 300);
+
+      const handleGlobalPointerUp = (upEvt: PointerEvent) => {
+        if (upEvt.button === 2) {
+          window.removeEventListener('pointerup', handleGlobalPointerUp);
+          isHoldingRightClickRef.current = false;
+          if (radialTriggerTimerRef.current) {
+            clearTimeout(radialTriggerTimerRef.current);
+            radialTriggerTimerRef.current = null;
+          }
+          const pressDuration = rightClickPressTimeRef.current > 0 ? Date.now() - rightClickPressTimeRef.current : 0;
+          rightClickPressTimeRef.current = 0;
+          // Ne déclencher la configuration classique QUE si la roue n'a JAMAIS été ouverte et que c'était un clic court (< 300ms)
+          if (!didOpenRadialRef.current && pressDuration < 300) {
+            onConfigure();
+          }
+        }
+      };
+
+      window.addEventListener('pointerup', handleGlobalPointerUp);
+      return;
+    }
+
+    if (e.pointerType === 'touch' && mode !== 'reader') {
+      didOpenRadialRef.current = false;
+      touchLongPressTimerRef.current = setTimeout(() => {
+        didOpenRadialRef.current = true;
+        setIsRadialOpen(true);
+      }, 350);
+    }
+
     if (!isDraggable) return;
     if (e.button !== 0) return; 
     e.stopPropagation();
@@ -93,10 +153,22 @@ export const TeamMarker = memo(function TeamMarker({
     handleMarkerDrag(e, team.id, onDragStart, onDragMove, onDragEnd, onConfigure);
   };
 
+  const handlePointerUp = () => {
+    if (touchLongPressTimerRef.current) {
+      clearTimeout(touchLongPressTimerRef.current);
+      touchLongPressTimerRef.current = null;
+    }
+  };
+
   const handleContextMenu = (e: React.MouseEvent) => {
-    if (mode === 'reader') return;
     e.preventDefault();
     e.stopPropagation();
+    if (mode === 'reader') return;
+    // Si un pointerdown a eu lieu ou si la roue est / a été ouverte, on bloque totalement le déclenchement contextmenu
+    if (rightClickPressTimeRef.current > 0 || isHoldingRightClickRef.current || isRadialOpen || didOpenRadialRef.current) {
+      return;
+    }
+    // Fallback direct pour les tests ou déclenchements clavier sans pointerdown
     onConfigure();
   };
 
@@ -116,12 +188,16 @@ export const TeamMarker = memo(function TeamMarker({
     <div 
       style={style} 
       onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
       onContextMenu={handleContextMenu}
       onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseLeave={() => {
+        setIsHovered(false);
+        if (touchLongPressTimerRef.current) clearTimeout(touchLongPressTimerRef.current);
+      }}
       className="nodrag group/outer relative"
     >
-      <div className={innerClass}>
+      <div className={`${innerClass} ${isRadialOpen ? 'opacity-0 pointer-events-none' : ''}`}>
         {/* Intervention: Ping and Alert Badge */}
         {team.status === 'intervention' && (
           <>
@@ -154,28 +230,30 @@ export const TeamMarker = memo(function TeamMarker({
           </div>
         )}
 
-        {/* Name & Specialty Tooltip (visible on hover) */}
-        <div 
-          className={`absolute mb-1 text-[11px] px-3 py-2 rounded-2xl shadow-2xl opacity-0 group-hover/outer:opacity-100 transition-all duration-300 border border-white/20 z-20 pointer-events-none font-display flex flex-col gap-1 ${tooltipPlacementClass} ${tooltipWidthClass}`}
-          style={{ 
-            backgroundColor: `${team.color}f0`, 
-            color: '#fff',
-            boxShadow: `0 10px 15px -3px ${team.color}44`
-          }}
-        >
-          <div className="flex items-center justify-between gap-2 border-b border-white/20 pb-1">
-            <span className="font-bold">{team.name}</span>
-            <span className="text-[9px] uppercase tracking-wider font-semibold opacity-90 flex items-center gap-1">
-              <RoleIcon className="w-2.5 h-2.5" />
-              {specialtyConfig.shortLabel}
-            </span>
+        {/* Name & Specialty Tooltip (visible on hover, masked when radial is open) */}
+        {!isRadialOpen && (
+          <div 
+            className={`absolute mb-1 text-[11px] px-3 py-2 rounded-2xl shadow-2xl opacity-0 group-hover/outer:opacity-100 transition-all duration-300 border border-white/20 z-20 pointer-events-none font-display flex flex-col gap-1 ${tooltipPlacementClass} ${tooltipWidthClass}`}
+            style={{ 
+              backgroundColor: `${team.color}f0`, 
+              color: '#fff',
+              boxShadow: `0 10px 15px -3px ${team.color}44`
+            }}
+          >
+            <div className="flex items-center justify-between gap-2 border-b border-white/20 pb-1">
+              <span className="font-bold">{team.name}</span>
+              <span className="text-[9px] uppercase tracking-wider font-semibold opacity-90 flex items-center gap-1">
+                <RoleIcon className="w-2.5 h-2.5" />
+                {specialtyConfig.shortLabel}
+              </span>
+            </div>
+            {team.description ? (
+              <span className="text-[10px] text-white/90 font-normal block leading-tight break-words">
+                {team.description}
+              </span>
+            ) : null}
           </div>
-          {team.description ? (
-            <span className="text-[10px] text-white/90 font-normal block leading-tight break-words">
-              {team.description}
-            </span>
-          ) : null}
-        </div>
+        )}
         
         {/* Pin or Squircle Visual */}
         <div className={`relative flex items-center justify-center ${isCoordo ? 'rounded-full ring-2 ring-white/80 shadow-[0_0_12px_rgba(255,255,255,0.5)]' : ''}`}>
@@ -195,6 +273,20 @@ export const TeamMarker = memo(function TeamMarker({
           <span>{getAbbreviation(team.name)}</span>
         </div>
       </div>
+
+      {/* Roue Radiale [E-06] - Placé au-dessus de tout le reste avec z-[9999] */}
+      {isRadialOpen && onUpdateStatus && mode !== 'reader' && (
+        <div className="absolute left-1/2 top-[40%] -translate-x-1/2 -translate-y-1/2 z-[9999] pointer-events-auto">
+          <RadialMenu
+            team={team}
+            onSelectStatus={(status) => {
+              onUpdateStatus(status);
+              setIsRadialOpen(false);
+            }}
+            onClose={() => setIsRadialOpen(false)}
+          />
+        </div>
+      )}
     </div>
   );
 });

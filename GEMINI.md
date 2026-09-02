@@ -46,8 +46,10 @@
    - Maintain strict UI/UX patterns established in existing components.
    - Respect strict Reader Mode (`mode === 'reader'`): disable editing, replace inputs with static text spans, hide color pickers, deletion, and administrative actions.
 
-3. **Test Suite Creation & Maintenance**:
-   - **Unit & UI Tests**: Add or update corresponding unit tests in `src/**/*.test.tsx` for any new component, hook, or state modification.
+3. **Tests E2E, Non-Régression & Cycle de Vie par Fonctionnalité**:
+   - **À chaque fonctionnalité développée**: Créer systématiquement les tests E2E (parcours et flux utilisateur complets de bout en bout) et les tests de non-régression correspondants par rapport à la fonctionnalité dans `src/**/*.test.tsx`.
+   - **Non-régression systématique**: Vérifier que les comportements existants, les interactions utilisateur et les modes d'accès (`reader`, `deployment`, `edition`) restent 100% opérationnels via des tests ciblés.
+   - **Nettoyage proactif au retrait de fonctionnalité**: Au retrait ou à la dépréciation d'une fonctionnalité, tous les tests la concernant doivent être immédiatement et rigoureusement retirés ou mis à jour (zéro test zombie ou faux positif).
    - **Headless & JSDOM Mocks**: Ensure global browser APIs absent in JSDOM (e.g., `localStorage`, `ResizeObserver`) are properly stubbed in `src/test/setup.ts` to prevent runtime test crashes.
 
 4. **Automated Verification Pipeline**:

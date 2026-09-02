@@ -1,4 +1,4 @@
-import { renderWithProviders, screen, act } from '../test/test-utils'
+import { renderWithProviders, screen, act, fireEvent } from '../test/test-utils'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { MapList } from './MapList'
 import { mapRepo } from '../lib/repositories/map'
@@ -64,5 +64,41 @@ describe('MapList', () => {
 
     expect(screen.getByText('Avec inters')).toBeInTheDocument()
     expect(screen.getByText('Sans inter')).toBeInTheDocument()
+
+    // Check that the checkbox is unchecked by default
+    const checkbox = screen.getByRole('checkbox', { name: /Gestion des interventions/i }) as HTMLInputElement
+    expect(checkbox.checked).toBe(false)
+  })
+
+  it('creates map with has_interventions = false by default when not checked', async () => {
+    vi.mocked(mapRepo.getAll).mockResolvedValue([])
+    vi.mocked(mapRepo.create).mockResolvedValue({ 
+      id: 'm1', 
+      name: 'Event Alpha', 
+      created_at: '2026-06-30T12:00:00Z', 
+      owner_id: 'user1', 
+      image_url: null, 
+      has_interventions: false 
+    })
+
+    await act(async () => {
+      renderWithProviders(<MapList onSelectMap={vi.fn()} signOut={vi.fn()} />)
+    })
+
+    const input = screen.getByPlaceholderText(/Nom de l'événement/i)
+    const form = input.closest('form')!
+
+    await act(async () => {
+      fireEvent.change(input, { target: { value: 'Event Alpha' } })
+    })
+
+    const checkbox = screen.getByRole('checkbox', { name: /Gestion des interventions/i }) as HTMLInputElement
+    expect(checkbox.checked).toBe(false)
+
+    await act(async () => {
+      fireEvent.submit(form)
+    })
+
+    expect(mapRepo.create).toHaveBeenCalledWith('Event Alpha', false)
   })
 })

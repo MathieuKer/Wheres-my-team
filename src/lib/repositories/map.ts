@@ -31,7 +31,7 @@ export const supabaseMapRepository: MapRepository = {
     return data;
   },
 
-  async create(name, has_interventions = true) {
+  async create(name, has_interventions = false) {
     // RLS will automatically set owner_id if we do it via a function, but here we let the DB handle it if possible, 
     // OR we must supply owner_id. Let's retrieve user id.
     const { data: { user } } = await supabase.auth.getUser();

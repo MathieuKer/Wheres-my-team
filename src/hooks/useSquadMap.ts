@@ -265,6 +265,15 @@ export function useSquadMap(mapId: string | null) {
     mutate(['interventions', mapId]);
   }, [mapId, interventions]);
 
+  const setHasInterventions = useCallback(async (enabled: boolean) => {
+    if (!mapId) return;
+    if (!enabled) {
+      await flushInterventions();
+    }
+    await mapRepo.update(mapId, { has_interventions: enabled });
+    mutate(['map', mapId], (current) => current ? { ...current, has_interventions: enabled } : current, false);
+  }, [mapId, flushInterventions]);
+
   const memoizedActions = useMemo(() => ({
     addTeam,
     updateTeamSpecialty,
@@ -286,6 +295,7 @@ export function useSquadMap(mapId: string | null) {
     deleteIntervention,
     flushInterventions,
     updateInterventionsPositions,
+    setHasInterventions,
     setMode
   }), [
     addTeam,
@@ -308,6 +318,7 @@ export function useSquadMap(mapId: string | null) {
     deleteIntervention,
     flushInterventions,
     updateInterventionsPositions,
+    setHasInterventions,
     setMode
   ]);
 
@@ -318,7 +329,7 @@ export function useSquadMap(mapId: string | null) {
       interventions,
       mode,
       mapUrl: mapSettings?.image_url ?? null,
-      hasInterventions: mapSettings?.has_interventions ?? true,
+      hasInterventions: mapSettings?.has_interventions ?? false,
       loading: loadingTeams || loadingMap || loadingZones || loadingInterventions
     },
     actions: memoizedActions
