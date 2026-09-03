@@ -94,50 +94,129 @@ export const TeamMarker = memo(function TeamMarker({
   const isCoordo = team.specialty === 'coordo';
   const isVehicle = specialtyConfig.shape === 'squircle';
 
-  const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.button === 2) {
-      if (mode === 'reader') return;
-      e.stopPropagation();
-      rightClickPressTimeRef.current = Date.now();
-      isHoldingRightClickRef.current = true;
-      didOpenRadialRef.current = false;
+  const handleRightClickInteraction = (e: React.PointerEvent) => {
+    if (mode === 'reader') return;
+    e.stopPropagation();
+    rightClickPressTimeRef.current = Date.now();
+    isHoldingRightClickRef.current = true;
+    didOpenRadialRef.current = false;
 
-      radialTriggerTimerRef.current = setTimeout(() => {
-        if (isHoldingRightClickRef.current) {
-          didOpenRadialRef.current = true;
-          setIsRadialOpen(true);
-        }
-      }, 300);
-
-      const handleGlobalPointerUp = (upEvt: PointerEvent) => {
-        if (upEvt.button === 2) {
-          window.removeEventListener('pointerup', handleGlobalPointerUp);
-          isHoldingRightClickRef.current = false;
-          if (radialTriggerTimerRef.current) {
-            clearTimeout(radialTriggerTimerRef.current);
-            radialTriggerTimerRef.current = null;
-          }
-          const pressDuration = rightClickPressTimeRef.current > 0 ? Date.now() - rightClickPressTimeRef.current : 0;
-          rightClickPressTimeRef.current = 0;
-          // Ne déclencher la configuration classique QUE si la roue n'a JAMAIS été ouverte et que c'était un clic court (< 300ms)
-          if (!didOpenRadialRef.current && pressDuration < 300) {
-            onConfigure();
-          }
-        }
-      };
-
-      window.addEventListener('pointerup', handleGlobalPointerUp);
-      return;
-    }
-
-    if (e.pointerType === 'touch' && mode !== 'reader') {
-      didOpenRadialRef.current = false;
-      touchLongPressTimerRef.current = setTimeout(() => {
+    radialTriggerTimerRef.current = setTimeout(() => {
+      if (isHoldingRightClickRef.current) {
         didOpenRadialRef.current = true;
         setIsRadialOpen(true);
-      }, 350);
-    }
+      }
+    }, 300);
 
+    const handleGlobalPointerUp = (upEvt: PointerEvent) => {
+      if (upEvt.button === 2) {
+        window.removeEventListener('pointerup', handleGlobalPointerUp);
+        isHoldingRightClickRef.current = false;
+        if (radialTriggerTimerRef.current) {
+          clearTimeout(radialTriggerTimerRef.current);
+          radialTriggerTimerRef.current = null;
+        }
+        const pressDuration = rightClickPressTimeRef.current > 0 ? Date.now() - rightClickPressTimeRef.current : 0;
+        rightClickPressTimeRef.current = 0;
+        // Ne déclencher la configuration classique QUE si la roue n'a JAMAIS été ouverte et que c'était un clic court (< 300ms)
+        if (!didOpenRadialRef.current && pressDuration < 300) {
+          onConfigure();
+        }
+      }
+    };
+
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+  };
+
+  const handleTouchInteraction = (e: React.PointerEvent) => {
+    if (mode === 'reader') return;
+    e.stopPropagation();
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startTime = Date.now();
+    let isDragging = false;
+    didOpenRadialRef.current = false;
+
+    const container = document.getElementById('map-bounds-container');
+    const rect = container?.getBoundingClientRect();
+
+    const now = Date.now();
+    if (now - lastClickTimeRef.current < 300) {
+      onDoubleClick();
+      lastClickTimeRef.current = 0;
+      return;
+    }
+    lastClickTimeRef.current = now;
+
+    touchLongPressTimerRef.current = setTimeout(() => {
+      if (!isDragging) {
+        didOpenRadialRef.current = true;
+        setIsRadialOpen(true);
+      }
+    }, 350);
+
+    const onTouchMove = (moveEvt: PointerEvent) => {
+      const dx = moveEvt.clientX - startX;
+      const dy = moveEvt.clientY - startY;
+      const dist = Math.hypot(dx, dy);
+
+      // Si la roue est ouverte, le mouvement du doigt est réservé à la roue (aucun déplacement d'équipe)
+      if (didOpenRadialRef.current) {
+        return;
+      }
+
+      // Dès que le doigt se déplace de plus de 8px avant 350ms, on annule la roue et on démarre le drag
+      if (dist >= 8) {
+        if (touchLongPressTimerRef.current) {
+          clearTimeout(touchLongPressTimerRef.current);
+          touchLongPressTimerRef.current = null;
+        }
+
+        if (isDraggable && rect) {
+          if (!isDragging) {
+            isDragging = true;
+            onDragStart(team.id);
+          }
+          const percentDx = (dx / rect.width) * 100;
+          const percentDy = (dy / rect.height) * 100;
+          onDragMove(team.id, percentDx, percentDy);
+        }
+      }
+    };
+
+    const onTouchUp = (upEvt: PointerEvent) => {
+      globalThis.removeEventListener('pointermove', onTouchMove);
+      globalThis.removeEventListener('pointerup', onTouchUp);
+
+      if (touchLongPressTimerRef.current) {
+        clearTimeout(touchLongPressTimerRef.current);
+        touchLongPressTimerRef.current = null;
+      }
+
+      const dx = upEvt.clientX - startX;
+      const dy = upEvt.clientY - startY;
+      const dist = Math.hypot(dx, dy);
+      const duration = Date.now() - startTime;
+
+      if (isDragging && rect) {
+        const percentDx = (dx / rect.width) * 100;
+        const percentDy = (dy / rect.height) * 100;
+        onDragEnd(team.id, percentDx, percentDy);
+        return;
+      }
+
+      // Tap court : clic court (< 350ms) sans déplacement (< 8px) et sans ouverture de roue
+      if (!didOpenRadialRef.current && dist < 8 && duration < 350) {
+        onConfigure();
+      }
+    };
+
+    globalThis.addEventListener('pointermove', onTouchMove);
+    globalThis.addEventListener('pointerup', onTouchUp);
+  };
+
+  const handleMouseDragInteraction = (e: React.PointerEvent) => {
     if (!isDraggable) return;
     if (e.button !== 0) return; 
     e.stopPropagation();
@@ -151,6 +230,20 @@ export const TeamMarker = memo(function TeamMarker({
     lastClickTimeRef.current = now;
 
     handleMarkerDrag(e, team.id, onDragStart, onDragMove, onDragEnd, onConfigure);
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button === 2) {
+      handleRightClickInteraction(e);
+      return;
+    }
+
+    if (e.pointerType === 'touch') {
+      handleTouchInteraction(e);
+      return;
+    }
+
+    handleMouseDragInteraction(e);
   };
 
   const handlePointerUp = () => {

@@ -155,4 +155,127 @@ describe('TeamMarker Component', () => {
 
     vi.useRealTimers();
   });
+
+  describe('Mobile touch interactions', () => {
+    it('triggers onConfigure on short touch tap (< 350ms, no movement)', () => {
+      vi.useFakeTimers();
+      const onConfigureMock = vi.fn();
+      const onDragStartMock = vi.fn();
+      renderWithProviders(
+        <TeamMarker 
+          {...defaultProps} 
+          onConfigure={onConfigureMock} 
+          onDragStart={onDragStartMock} 
+        />
+      );
+
+      const marker = screen.getByText('AB').closest('.nodrag')!;
+      fireEvent.pointerDown(marker, { pointerType: 'touch', clientX: 100, clientY: 100 });
+      act(() => {
+        vi.advanceTimersByTime(120);
+      });
+      fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 100, clientY: 100 });
+
+      expect(onConfigureMock).toHaveBeenCalledTimes(1);
+      expect(onDragStartMock).not.toHaveBeenCalled();
+      expect(screen.queryByLabelText('Sélection rapide du statut')).not.toBeInTheDocument();
+
+      vi.useRealTimers();
+    });
+
+    it('triggers drag and cancels RadialMenu on touch movement (>= 8px)', () => {
+      vi.useFakeTimers();
+      const onConfigureMock = vi.fn();
+      const onDragStartMock = vi.fn();
+      const onDragMoveMock = vi.fn();
+      const onDragEndMock = vi.fn();
+
+      // Create mock map container
+      const container = document.createElement('div');
+      container.id = 'map-bounds-container';
+      vi.spyOn(container, 'getBoundingClientRect').mockReturnValue({
+        width: 1000,
+        height: 1000,
+        left: 0,
+        top: 0,
+        right: 1000,
+        bottom: 1000,
+        x: 0,
+        y: 0,
+        toJSON: () => {},
+      });
+      document.body.appendChild(container);
+
+      renderWithProviders(
+        <TeamMarker 
+          {...defaultProps} 
+          onConfigure={onConfigureMock} 
+          onDragStart={onDragStartMock}
+          onDragMove={onDragMoveMock}
+          onDragEnd={onDragEndMock}
+        />
+      );
+
+      const marker = screen.getByText('AB').closest('.nodrag')!;
+      fireEvent.pointerDown(marker, { pointerType: 'touch', clientX: 100, clientY: 100 });
+
+      // Move finger by dx=50, dy=50 (dist = ~70px > 8px)
+      fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 150, clientY: 150 });
+
+      expect(onDragStartMock).toHaveBeenCalledWith('t1');
+      expect(onDragMoveMock).toHaveBeenCalledWith('t1', 5, 5);
+
+      // Fast forward past 350ms to ensure radial timer was cancelled
+      act(() => {
+        vi.advanceTimersByTime(400);
+      });
+      expect(screen.queryByLabelText('Sélection rapide du statut')).not.toBeInTheDocument();
+
+      // Release touch
+      fireEvent.pointerUp(window, { pointerType: 'touch', clientX: 150, clientY: 150 });
+
+      expect(onDragEndMock).toHaveBeenCalledWith('t1', 5, 5);
+      expect(onConfigureMock).not.toHaveBeenCalled();
+
+      document.body.removeChild(container);
+      vi.useRealTimers();
+    });
+
+    it('opens RadialMenu on static touch long-press (>= 350ms) and locks team dragging', () => {
+      vi.useFakeTimers();
+      const onConfigureMock = vi.fn();
+      const onDragStartMock = vi.fn();
+      const onDragMoveMock = vi.fn();
+      const onUpdateStatusMock = vi.fn();
+
+      renderWithProviders(
+        <TeamMarker 
+          {...defaultProps} 
+          onConfigure={onConfigureMock} 
+          onDragStart={onDragStartMock}
+          onDragMove={onDragMoveMock}
+          onUpdateStatus={onUpdateStatusMock}
+        />
+      );
+
+      const marker = screen.getByText('AB').closest('.nodrag')!;
+      fireEvent.pointerDown(marker, { pointerType: 'touch', clientX: 100, clientY: 100 });
+
+      // Hold still for 350ms
+      act(() => {
+        vi.advanceTimersByTime(350);
+      });
+
+      // RadialMenu should be open
+      expect(screen.getByLabelText('Sélection rapide du statut')).toBeInTheDocument();
+      expect(onDragStartMock).not.toHaveBeenCalled();
+
+      // Subsequent movement should NOT drag the team while RadialMenu is active
+      fireEvent.pointerMove(window, { pointerType: 'touch', clientX: 160, clientY: 160 });
+      expect(onDragMoveMock).not.toHaveBeenCalled();
+      expect(onConfigureMock).not.toHaveBeenCalled();
+
+      vi.useRealTimers();
+    });
+  });
 });
