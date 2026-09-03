@@ -30,3 +30,8 @@ env.local
 # AI Agents directories
 .agent/
 .agents/
+
+# Media recordings
+*.mov
+*.mp4
+*.webm

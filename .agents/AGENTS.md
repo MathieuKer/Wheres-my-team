@@ -28,7 +28,9 @@ You must strictly follow the rules defined in [GEMINI.md](file:///Users/mkeromne
 - **Actions d'Administration** : Les actions lourdes ("Changer le plan", "Flush Événement") doivent être réservées et affichées uniquement en mode **Plan** (édition).
 - **Mode Lecteur strict** : En mode `'reader'`, tous les inputs modifiables d'équipes (noms) doivent être rendus en texte statique (`<span>`), les éditeurs de notes doivent être bloqués, et les color pickers, boutons de recentrage et suppressions doivent être complètement masqués.
 
-## Standards de Tests Headless & CI/CD
+## Standards de Tests E2E, Non-Régression & Cycle de Vie
+- **Tests E2E & Non-régression par fonctionnalité développée** : À chaque fonctionnalité développée, créer systématiquement les tests E2E (parcours et flux utilisateur complets de bout en bout) et les tests de non-régression associés dans `src/**/*.test.tsx`.
+- **Cycle de vie des tests & Nettoyage proactif** : Au retrait ou à la dépréciation d'une fonctionnalité, tous les tests la concernant doivent être immédiatement et rigoureusement retirés ou adaptés (zéro test zombie ou faux positif).
 - **Mock de variables globales** : Dans les suites de tests Vitest / JSDOM, mockez systématiquement les API globales absentes ou défaillantes comme `localStorage` (avec stubGlobal) et `ResizeObserver` (avec mock de classe) pour éviter les crashs à la compilation ou au montage.
 - **CI/CD GitHub Actions & SonarCloud** : Le pipeline automatisé (`.github/workflows/ci.yml`) valide tout commit sur `dev` et toute PR vers `main`.
 

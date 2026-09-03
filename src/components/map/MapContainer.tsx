@@ -35,6 +35,33 @@ interface MapContainerProps {
   setConfiguringInterventionId: (id: string | null) => void;
 }
 
+function getStatusColorClass(status: TeamStatus): string {
+  switch (status) {
+    case 'dispo': return 'bg-emerald-500';
+    case 'en_route': return 'bg-blue-500';
+    case 'intervention': return 'bg-red-500';
+    default: return 'bg-amber-500';
+  }
+}
+
+function getStatusLabel(status: TeamStatus): string {
+  switch (status) {
+    case 'dispo': return 'Disponible';
+    case 'en_route': return 'En direction';
+    case 'pause': return 'En pause';
+    default: return 'Intervention';
+  }
+}
+
+function getPriorityColorClass(priority: string): string {
+  switch (priority) {
+    case 'P0': return 'bg-slate-950 border border-red-500';
+    case 'P1': return 'bg-red-500';
+    case 'P3': return 'bg-amber-500';
+    default: return 'bg-blue-500';
+  }
+}
+
 const TeamConfigModal = ({ 
   team, 
   onClose, 
@@ -101,6 +128,7 @@ const TeamConfigModal = ({
             </span>
           </div>
           <button 
+            type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-white p-1 hover:bg-white/5 rounded-md transition-colors"
             aria-label="Fermer"
@@ -116,9 +144,9 @@ const TeamConfigModal = ({
           </span>
           {isReadOnly ? (
             <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${team.status === 'dispo' ? 'bg-emerald-500' : team.status === 'en_route' ? 'bg-blue-500' : team.status === 'intervention' ? 'bg-red-500' : 'bg-amber-500'}`} />
+              <span className={`w-2.5 h-2.5 rounded-full ${getStatusColorClass(team.status)}`} />
               <span className="text-xs font-bold text-slate-300 capitalize">
-                {team.status === 'dispo' ? 'Disponible' : team.status === 'en_route' ? 'En direction' : team.status === 'pause' ? 'En pause' : 'Intervention'}
+                {getStatusLabel(team.status)}
               </span>
             </div>
           ) : (
@@ -282,10 +310,7 @@ const InterventionConfigModal = ({
   // Close on Escape or Ctrl+Enter / Cmd+Enter
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopImmediatePropagation();
-        handleSave();
-      } else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      if (e.key === 'Escape' || (e.key === 'Enter' && (e.ctrlKey || e.metaKey))) {
         e.stopImmediatePropagation();
         handleSave();
       }
@@ -324,9 +349,9 @@ const InterventionConfigModal = ({
 
         {/* Motif */}
         <div className="mb-4">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
             Descriptif / Motif
-          </label>
+          </span>
           {isReadOnly ? (
             <div className="text-xs bg-black/20 rounded-lg p-2.5 border border-white/5 text-slate-300 font-semibold">
               {description || 'Aucun motif renseigné'}
@@ -344,12 +369,12 @@ const InterventionConfigModal = ({
 
         {/* Priorité */}
         <div className="mb-4">
-          <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+          <span className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
             Priorité
-          </label>
+          </span>
           {isReadOnly ? (
             <div className="flex items-center gap-2">
-              <span className={`w-2.5 h-2.5 rounded-full ${priority === 'P0' ? 'bg-slate-950 border border-red-500' : priority === 'P1' ? 'bg-red-500' : priority === 'P3' ? 'bg-amber-500' : 'bg-blue-500'}`} />
+              <span className={`w-2.5 h-2.5 rounded-full ${getPriorityColorClass(priority)}`} />
               <span className="text-xs font-bold text-slate-300">{priority}</span>
             </div>
           ) : (
@@ -1069,6 +1094,7 @@ export function MapContainer({
                   onDragMove={handleDragMove}
                   onDragEnd={handleDragEnd}
                   onConfigure={() => setConfiguringTeamId(team.id)}
+                  onUpdateStatus={(status) => onTeamUpdateStatus?.(team.id, status)}
                 />
               );
             })}

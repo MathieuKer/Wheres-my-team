@@ -31,7 +31,7 @@ export const supabaseMapRepository: MapRepository = {
     return data;
   },
 
-  async create(name, has_interventions = true) {
+  async create(name, has_interventions = false) {
     // RLS will automatically set owner_id if we do it via a function, but here we let the DB handle it if possible, 
     // OR we must supply owner_id. Let's retrieve user id.
     const { data: { user } } = await supabase.auth.getUser();
@@ -47,19 +47,13 @@ export const supabaseMapRepository: MapRepository = {
   },
 
   async update(id, updates) {
-    const { error } = await supabase
-      .from('maps')
-      .update(updates)
-      .eq('id', id);
-    if (error) throw error;
+    const res = await supabase.from('maps').update(updates).match({ id });
+    if (res.error) throw res.error;
   },
 
   async delete(id) {
-    const { error } = await supabase
-      .from('maps')
-      .delete()
-      .eq('id', id);
-    if (error) throw error;
+    const res = await supabase.from('maps').delete().match({ id });
+    if (res.error) throw res.error;
   },
 
   subscribe(callback) {

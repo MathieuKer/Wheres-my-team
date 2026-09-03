@@ -4,6 +4,7 @@ import { LogOut, Menu, X, ArrowLeft, Layout, Settings, Eye, AlertCircle } from '
 import { useSquadMap } from '../hooks/useSquadMap';
 import { Sidebar } from './sidebar/Sidebar';
 import { MapContainer } from './map/MapContainer';
+import unicornGif from '../assets/unicorn.gif';
 
 interface DashboardProps {
   mapId: string;
@@ -272,6 +273,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
           onDeleteIntervention={actions.deleteIntervention}
           onFlushInterventions={actions.flushInterventions}
           onConfigureIntervention={setConfiguringInterventionId}
+          onToggleInterventions={actions.setHasInterventions}
         />
 
         {state.mode === 'edition' && (
@@ -303,7 +305,7 @@ export function Dashboard({ mapId, onBack, signOut }: Readonly<DashboardProps>) 
         }`}
       >
         <img 
-          src="https://media.giphy.com/media/26AHG5KGFxSkUWw1i/giphy.gif" 
+          src={unicornGif} 
           alt="Magical Unicorn animation" 
           width={256}
           height={256}

@@ -198,4 +198,94 @@ describe('Sidebar Component', () => {
     expect(inputValues).not.toContain('Alpha');
     expect(inputValues).not.toContain('Superviseur Ouest');
   });
+
+  it('allows disabling interventions with confirmation dialog in edition mode', async () => {
+    const onToggleInterventionsMock = vi.fn().mockResolvedValue(undefined);
+
+    await act(async () => {
+      renderWithProviders(
+        <Sidebar 
+          {...mockProps} 
+          mode="edition" 
+          hasInterventions={true} 
+          onFlushInterventions={vi.fn()}
+          onToggleInterventions={onToggleInterventionsMock} 
+        />
+      );
+    });
+
+    // Both buttons should be available in edition mode with hasInterventions=true
+    expect(screen.getByRole('button', { name: /Vider l'historique des interventions/i })).toBeInTheDocument();
+    const disableBtn = screen.getByRole('button', { name: /Retirer la gestion des interventions/i });
+    expect(disableBtn).toBeInTheDocument();
+
+    // Click to disable interventions
+    await act(async () => {
+      disableBtn.click();
+    });
+
+    // Confirm dialog should open
+    expect(screen.getByText('Retirer la gestion des interventions ?')).toBeInTheDocument();
+    expect(screen.getByText(/De plus, toutes les équipes actuellement mobilisées/i)).toBeInTheDocument();
+
+    // Confirm
+    const confirmBtn = screen.getByRole('button', { name: /Désactiver et supprimer/i });
+    await act(async () => {
+      confirmBtn.click();
+    });
+
+    expect(onToggleInterventionsMock).toHaveBeenCalledWith(false);
+  });
+
+  it('allows enabling interventions and displays success modal when hasInterventions is false', async () => {
+    const onToggleInterventionsMock = vi.fn().mockResolvedValue(undefined);
+
+    await act(async () => {
+      renderWithProviders(
+        <Sidebar 
+          {...mockProps} 
+          mode="edition" 
+          hasInterventions={false} 
+          onToggleInterventions={onToggleInterventionsMock} 
+        />
+      );
+    });
+
+    expect(screen.getByText(/La gestion des interventions est actuellement désactivée pour cet événement/i)).toBeInTheDocument();
+    const enableBtn = screen.getByRole('button', { name: /Gérer les interventions/i });
+    expect(enableBtn).toBeInTheDocument();
+
+    // Click to enable
+    await act(async () => {
+      enableBtn.click();
+    });
+
+    expect(onToggleInterventionsMock).toHaveBeenCalledWith(true);
+
+    // Success modal appears
+    expect(screen.getByText('Interventions activées !')).toBeInTheDocument();
+    expect(screen.getByText(/bonne chance !/i)).toBeInTheDocument();
+
+    // Dismiss modal
+    const dismissBtn = screen.getByRole('button', { name: /C'est parti !/i });
+    await act(async () => {
+      dismissBtn.click();
+    });
+
+    expect(screen.queryByText('Interventions activées !')).not.toBeInTheDocument();
+  });
+
+  it('does not display intervention administration card in reader mode', async () => {
+    await act(async () => {
+      renderWithProviders(
+        <Sidebar 
+          {...mockProps} 
+          mode="reader" 
+          hasInterventions={true} 
+        />
+      );
+    });
+
+    expect(screen.queryByText('Administration des Interventions')).not.toBeInTheDocument();
+  });
 });

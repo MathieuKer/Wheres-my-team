@@ -4,9 +4,91 @@ import { supabase } from '../../lib/supabase';
 import { parseZoneType } from '../../lib/utils';
 import { getNextTeamSuggestion, getTeamSuggestionsPool, getRoleDefaultSuggestion } from '../../lib/teamNaming';
 import { SPECIALTY_LIST, getSpecialtyConfig } from '../../lib/specialties';
-import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal, RotateCcw, Navigation, Clock, X, PlusCircle } from 'lucide-react';
+import { Trash2, AlertTriangle, Coffee, Play, UploadCloud, FileText, Layout, Type, BriefcaseMedical, Hospital, LogIn, Music, Shield, Utensils, SlidersHorizontal, RotateCcw, Navigation, Clock, X, PlusCircle, EyeOff, CheckCircle2 } from 'lucide-react';
 import { ColorPicker } from './ColorPicker';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+
+function TeamRowStatusBadge({ status }: { readonly status: TeamStatus }) {
+  return (
+    <div className="shrink-0 text-[10px] px-2.5 py-1 rounded-lg bg-black/30 border border-white/5 text-slate-400 font-semibold font-display flex items-center gap-1.5">
+      {status === 'intervention' && (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+          <span className="text-red-400 font-black">Intervention</span>
+        </>
+      )}
+      {status === 'en_route' && (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+          <span className="text-blue-400 font-black">En route</span>
+        </>
+      )}
+      {status === 'pause' && (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span className="text-amber-500 font-black">Pause</span>
+        </>
+      )}
+      {status === 'dispo' && (
+        <>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+          <span className="text-emerald-400 font-black">Disponible</span>
+        </>
+      )}
+    </div>
+  );
+}
+
+function TeamRowStatusControls({ 
+  team, 
+  isCompact, 
+  btnPadding, 
+  iconClassName, 
+  onUpdateStatus 
+}: { 
+  readonly team: Team; 
+  readonly isCompact: boolean; 
+  readonly btnPadding: string; 
+  readonly iconClassName: string; 
+  readonly onUpdateStatus: (id: string, status: TeamStatus) => void;
+}) {
+  return (
+    <div className={`flex items-center gap-0.5 shrink-0 bg-black/20 rounded-lg ${isCompact ? 'p-0.5' : 'p-1'} border border-white/5`}>
+      <button 
+        type="button"
+        onClick={() => onUpdateStatus(team.id, 'dispo')}
+        className={`${btnPadding} transition-all ${team.status === 'dispo' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}
+        aria-label="Marquer comme disponible"
+      >
+        <Play className={iconClassName} aria-hidden="true" />
+      </button>
+      <button 
+        type="button"
+        onClick={() => onUpdateStatus(team.id, 'en_route')}
+        className={`${btnPadding} transition-all ${team.status === 'en_route' ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-blue-400'}`}
+        aria-label="Marquer en route"
+      >
+        <Navigation className={iconClassName} aria-hidden="true" />
+      </button>
+      <button 
+        type="button"
+        onClick={() => onUpdateStatus(team.id, 'intervention')}
+        className={`${btnPadding} transition-all ${team.status === 'intervention' ? 'bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse' : 'text-slate-500 hover:bg-white/5 hover:text-red-400'}`}
+        aria-label="Marquer en intervention"
+      >
+        <AlertTriangle className={iconClassName} aria-hidden="true" />
+      </button>
+      <button 
+        type="button"
+        onClick={() => onUpdateStatus(team.id, 'pause')}
+        className={`${btnPadding} transition-all ${team.status === 'pause' ? 'bg-amber-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-amber-400'}`}
+        aria-label="Marquer en pause"
+      >
+        <Coffee className={iconClassName} aria-hidden="true" />
+      </button>
+    </div>
+  );
+}
 
 interface TeamRowProps {
   team: Team;
@@ -137,69 +219,17 @@ const TeamRow = memo(function TeamRow({
             />
           )}
         </div>
-        
+
         {isReadOnly ? (
-          <div className="shrink-0 text-[10px] px-2.5 py-1 rounded-lg bg-black/30 border border-white/5 text-slate-400 font-semibold font-display flex items-center gap-1.5">
-            {team.status === 'intervention' && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                <span className="text-red-400 font-black">Intervention</span>
-              </>
-            )}
-            {team.status === 'en_route' && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                <span className="text-blue-400 font-black">En route</span>
-              </>
-            )}
-            {team.status === 'pause' && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                <span className="text-amber-500 font-black">Pause</span>
-              </>
-            )}
-            {team.status === 'dispo' && (
-              <>
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                <span className="text-emerald-400 font-black">Disponible</span>
-              </>
-            )}
-          </div>
+          <TeamRowStatusBadge status={team.status} />
         ) : (
-          <div className={`flex items-center gap-0.5 shrink-0 bg-black/20 rounded-lg ${isCompact ? 'p-0.5' : 'p-1'} border border-white/5`}>
-            <button 
-              type="button"
-              onClick={() => onUpdateStatus(team.id, 'dispo')}
-              className={`${btnPadding} transition-all ${team.status === 'dispo' ? 'bg-slate-700 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-slate-300'}`}
-              aria-label="Marquer comme disponible"
-            >
-              <Play className={iconClassName} aria-hidden="true" />
-            </button>
-            <button 
-              type="button"
-              onClick={() => onUpdateStatus(team.id, 'en_route')}
-              className={`${btnPadding} transition-all ${team.status === 'en_route' ? 'bg-blue-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-blue-400'}`}
-              aria-label="Marquer en route"
-            >
-              <Navigation className={iconClassName} aria-hidden="true" />
-            </button>
-            <button 
-              type="button"
-              onClick={() => onUpdateStatus(team.id, 'intervention')}
-              className={`${btnPadding} transition-all ${team.status === 'intervention' ? 'bg-red-500 text-white shadow-lg shadow-red-500/40 animate-pulse' : 'text-slate-500 hover:bg-white/5 hover:text-red-400'}`}
-              aria-label="Marquer en intervention"
-            >
-              <AlertTriangle className={iconClassName} aria-hidden="true" />
-            </button>
-            <button 
-              type="button"
-              onClick={() => onUpdateStatus(team.id, 'pause')}
-              className={`${btnPadding} transition-all ${team.status === 'pause' ? 'bg-amber-600 text-white shadow-inner' : 'text-slate-500 hover:bg-white/5 hover:text-amber-400'}`}
-              aria-label="Marquer en pause"
-            >
-              <Coffee className={iconClassName} aria-hidden="true" />
-            </button>
-          </div>
+          <TeamRowStatusControls 
+            team={team} 
+            isCompact={isCompact} 
+            btnPadding={btnPadding} 
+            iconClassName={iconClassName} 
+            onUpdateStatus={onUpdateStatus} 
+          />
         )}
 
         {/* Note button */}
@@ -385,6 +415,7 @@ interface SidebarProps {
   onDeleteIntervention?: (id: string) => Promise<void>;
   onFlushInterventions?: () => Promise<void>;
   onConfigureIntervention?: (id: string) => void;
+  onToggleInterventions?: (enabled: boolean) => Promise<void>;
 }
 
 export const Sidebar = memo(function Sidebar({ 
@@ -408,7 +439,8 @@ export const Sidebar = memo(function Sidebar({
   onAddIntervention,
   onDeleteIntervention,
   onFlushInterventions,
-  onConfigureIntervention
+  onConfigureIntervention,
+  onToggleInterventions
 }: Readonly<SidebarProps>) {
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#3b82f6');
@@ -416,6 +448,8 @@ export const Sidebar = memo(function Sidebar({
   const [selectedFilterSpecialty, setSelectedFilterSpecialty] = useState<TeamSpecialty | 'all'>('all');
   const [uploading, setUploading] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
+  const [showDisableInterventionsConfirm, setShowDisableInterventionsConfirm] = useState(false);
+  const [showActivationSuccessModal, setShowActivationSuccessModal] = useState(false);
   const [, forceUpdate] = useReducer((x: number) => x + 1, 0);
 
   useEffect(() => {
@@ -979,30 +1013,58 @@ export const Sidebar = memo(function Sidebar({
         </div>
 
         {/* Section Administration des Interventions */}
-        {hasInterventions && (
-          <div className="flex flex-col gap-3 glass-card p-4 rounded-2xl border border-red-500/10 bg-red-950/5 mt-4">
-            <div className="text-xs font-bold uppercase tracking-wider text-red-400 mb-1 font-display">
-              Administration des Interventions
+        <div className={`flex flex-col gap-3 glass-card p-4 rounded-2xl mt-4 border ${hasInterventions ? 'border-red-500/10 bg-red-950/5' : 'border-blue-500/10 bg-blue-950/5'}`}>
+          <div className={`text-xs font-bold uppercase tracking-wider mb-1 font-display ${hasInterventions ? 'text-red-400' : 'text-blue-400'}`}>
+            Administration des Interventions
+          </div>
+          <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
+            {hasInterventions 
+              ? "Cette action supprimera définitivement tout l'historique des interventions et réinitialisera le compteur à 0." 
+              : "La gestion des interventions est actuellement désactivée pour cet événement."}
+          </p>
+          {hasInterventions ? (
+            <div className="flex flex-col gap-2">
+              {onFlushInterventions && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm("⚠️ ATTENTION : Voulez-vous vraiment supprimer toutes les interventions et réinitialiser le compteur ? Cette action est irréversible.")) {
+                      onFlushInterventions();
+                    }
+                  }}
+                  className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-600 hover:text-white border border-red-500/20 p-2.5 rounded-xl text-xs font-bold text-red-400 transition-all cursor-pointer shadow-sm shadow-red-950/30"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  Vider l'historique des interventions
+                </button>
+              )}
+              {onToggleInterventions && (
+                <button
+                  type="button"
+                  onClick={() => setShowDisableInterventionsConfirm(true)}
+                  className="flex items-center justify-center gap-2 bg-red-950/40 hover:bg-red-700 hover:text-white border border-red-500/30 p-2.5 rounded-xl text-xs font-bold text-red-300 transition-all cursor-pointer shadow-sm shadow-red-950/40"
+                >
+                  <EyeOff className="w-3.5 h-3.5" />
+                  Retirer la gestion des interventions
+                </button>
+              )}
             </div>
-            <p className="text-[10px] text-slate-500 font-semibold leading-relaxed">
-              Cette action supprimera définitivement tout l'historique des interventions et réinitialisera le compteur à 0.
-            </p>
-            {onFlushInterventions && (
+          ) : (
+            onToggleInterventions && (
               <button
                 type="button"
-                onClick={() => {
-                  if (confirm("⚠️ ATTENTION : Voulez-vous vraiment supprimer toutes les interventions et réinitialiser le compteur ? Cette action est irréversible.")) {
-                    onFlushInterventions();
-                  }
+                onClick={async () => {
+                  await onToggleInterventions(true);
+                  setShowActivationSuccessModal(true);
                 }}
-                className="flex items-center justify-center gap-2 bg-red-950/20 hover:bg-red-600 hover:text-white border border-red-500/20 p-2.5 rounded-xl text-xs font-bold text-red-400 transition-all cursor-pointer shadow-sm shadow-red-950/30"
+                className="flex items-center justify-center gap-2 bg-blue-600/20 hover:bg-blue-600 hover:text-white border border-blue-500/30 p-2.5 rounded-xl text-xs font-bold text-blue-400 transition-all cursor-pointer shadow-sm shadow-blue-950/30"
               >
-                <Trash2 className="w-3.5 h-3.5" />
-                Vider l'historique des interventions
+                <PlusCircle className="w-3.5 h-3.5" />
+                Gérer les interventions
               </button>
-            )}
-          </div>
-        )}
+            )
+          )}
+        </div>
       </div>
       )}
 
@@ -1231,6 +1293,72 @@ export const Sidebar = memo(function Sidebar({
          }}
          onCancel={() => setZoneToDelete(null)}
        />
+
+       {/* Confirmation pour retirer la gestion des interventions */}
+       <ConfirmDialog
+         isOpen={showDisableInterventionsConfirm}
+         title="Retirer la gestion des interventions ?"
+         message={
+           <p className="text-xs leading-relaxed">
+             Cette action désactivera la gestion des interventions pour cet événement, supprimera définitivement toutes les fiches d'interventions et réinitialisera le compteur à 0.
+             <br /><br />
+             <span className="text-amber-400 font-bold">De plus, toutes les équipes actuellement mobilisées sur une intervention repasseront automatiquement au statut « Disponible ».</span>
+           </p>
+         }
+         confirmText="Désactiver et supprimer"
+         cancelText="Annuler"
+         onConfirm={async () => {
+           setShowDisableInterventionsConfirm(false);
+           await onToggleInterventions?.(false);
+         }}
+         onCancel={() => setShowDisableInterventionsConfirm(false)}
+       />
+
+       {/* Modal d'information après activation des interventions */}
+       {showActivationSuccessModal && (
+         <dialog 
+           open
+           aria-label="Interventions activées"
+           className="fixed inset-0 z-[9999] m-0 p-4 h-full w-full max-w-none max-h-none flex items-center justify-center bg-black/60 backdrop-blur-sm border-none animate-in fade-in duration-200"
+           onKeyDown={(e) => {
+             if (e.key === 'Escape' || e.key === 'Enter') {
+               e.preventDefault();
+               setShowActivationSuccessModal(false);
+             }
+           }}
+         >
+           <div className="bg-slate-900 border border-blue-500/30 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+             <div className="p-5 flex gap-4">
+               <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center shrink-0 border border-blue-500/30">
+                 <CheckCircle2 className="w-5 h-5 text-blue-400" aria-hidden="true" />
+               </div>
+               <div className="flex-1 pt-1">
+                 <h3 className="text-lg font-bold text-white mb-2 font-display leading-none">Interventions activées !</h3>
+                 <p className="text-xs text-slate-300 font-medium leading-relaxed">
+                   Les interventions ont été activées sur cet événement, bonne chance ! :)
+                 </p>
+               </div>
+               <button 
+                 type="button"
+                 onClick={() => setShowActivationSuccessModal(false)}
+                 className="self-start text-slate-500 hover:text-white transition-colors p-1 cursor-pointer"
+                 aria-label="Fermer"
+               >
+                 <X className="w-5 h-5" />
+               </button>
+             </div>
+             <div className="bg-white/5 p-4 flex justify-end border-t border-white/5">
+               <button
+                 type="button"
+                 onClick={() => setShowActivationSuccessModal(false)}
+                 className="px-4 py-2 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-500/20 transition-all cursor-pointer outline-none"
+               >
+                 C'est parti !
+               </button>
+             </div>
+           </div>
+         </dialog>
+       )}
     </div>
   );
 });
