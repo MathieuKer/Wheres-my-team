@@ -1316,18 +1316,16 @@ export const Sidebar = memo(function Sidebar({
 
        {/* Modal d'information après activation des interventions */}
        {showActivationSuccessModal && (
-         <div 
-           className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
-           role="dialog"
-           aria-modal="true"
+         <dialog 
+           open
            aria-label="Interventions activées"
+           className="fixed inset-0 z-[9999] m-0 p-4 h-full w-full max-w-none max-h-none flex items-center justify-center bg-black/60 backdrop-blur-sm border-none animate-in fade-in duration-200"
            onKeyDown={(e) => {
              if (e.key === 'Escape' || e.key === 'Enter') {
                e.preventDefault();
                setShowActivationSuccessModal(false);
              }
            }}
-           tabIndex={-1}
          >
            <div className="bg-slate-900 border border-blue-500/30 rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
              <div className="p-5 flex gap-4">
@@ -1359,7 +1357,7 @@ export const Sidebar = memo(function Sidebar({
                </button>
              </div>
            </div>
-         </div>
+         </dialog>
        )}
     </div>
   );

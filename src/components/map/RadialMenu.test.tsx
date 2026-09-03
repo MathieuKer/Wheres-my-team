@@ -65,6 +65,20 @@ describe('RadialMenu Component [E-06]', () => {
     expect(onCloseMock).toHaveBeenCalledTimes(1);
   });
 
+function mockMenuBoundingBox(element: HTMLElement) {
+  vi.spyOn(element, 'getBoundingClientRect').mockReturnValue({
+    left: 100,
+    top: 100,
+    width: 220,
+    height: 220,
+    right: 320,
+    bottom: 320,
+    x: 100,
+    y: 100,
+    toJSON: () => {},
+  });
+}
+
   it('triggers onSelectStatus on pointerup when a sector is hovered', () => {
     const onSelectStatusMock = vi.fn();
     const onCloseMock = vi.fn();
@@ -73,18 +87,7 @@ describe('RadialMenu Component [E-06]', () => {
       <RadialMenu {...defaultProps} onSelectStatus={onSelectStatusMock} onClose={onCloseMock} />
     );
 
-    const menuEl = container.firstChild as HTMLElement;
-    vi.spyOn(menuEl, 'getBoundingClientRect').mockReturnValue({
-      left: 100,
-      top: 100,
-      width: 220,
-      height: 220,
-      right: 320,
-      bottom: 320,
-      x: 100,
-      y: 100,
-      toJSON: () => {},
-    });
+    mockMenuBoundingBox(container.firstChild as HTMLElement);
 
     // Center is at (210, 210). Pointing up to (210, 150) -> dx = 0, dy = -60 -> angle = 0° / North (dispo)
     fireEvent(window, new PointerEvent('pointermove', { clientX: 210, clientY: 150 }));
@@ -104,18 +107,7 @@ describe('RadialMenu Component [E-06]', () => {
       <RadialMenu {...defaultProps} onSelectStatus={onSelectStatusMock} onClose={onCloseMock} />
     );
 
-    const menuEl = container.firstChild as HTMLElement;
-    vi.spyOn(menuEl, 'getBoundingClientRect').mockReturnValue({
-      left: 100,
-      top: 100,
-      width: 220,
-      height: 220,
-      right: 320,
-      bottom: 320,
-      x: 100,
-      y: 100,
-      toJSON: () => {},
-    });
+    mockMenuBoundingBox(container.firstChild as HTMLElement);
 
     // Center is at (210, 210). Moving to (212, 212) -> distance < 32px
     fireEvent(window, new PointerEvent('pointermove', { clientX: 212, clientY: 212 }));

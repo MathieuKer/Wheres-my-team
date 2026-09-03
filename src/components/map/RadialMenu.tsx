@@ -173,8 +173,9 @@ export const RadialMenu = memo(function RadialMenu({ team, onSelectStatus, onClo
     <div
       ref={menuRef}
       role="menu"
+      tabIndex={-1}
       aria-label="Sélection rapide du statut"
-      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] pointer-events-auto select-none z-[1000] animate-in fade-in zoom-in-90 duration-150"
+      className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[220px] h-[220px] pointer-events-auto select-none z-[1000] animate-in fade-in zoom-in-90 duration-150 outline-none"
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();

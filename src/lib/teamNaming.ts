@@ -7,8 +7,6 @@ export const PHONETIC_ALPHABET: readonly string[] = [
   'X-ray', 'Yankee', 'Zulu'
 ] as const;
 
-const NUMBERED_TEAM_REGEX = /^(.+?)\s*(\d+)$/;
-
 export function getRoleDefaultSuggestion(role: TeamSpecialty, teams: Team[]): string {
   const existingNames = new Set(teams.map(t => t.name.trim().toLowerCase()));
 
@@ -41,11 +39,14 @@ export interface ParsedTeamName {
 
 export function parseTeamName(name: string): ParsedTeamName {
   const trimmed = name.trim();
-  const match = NUMBERED_TEAM_REGEX.exec(trimmed);
-  if (match) {
-    const prefix = match[1].trim();
-    const number = Number.parseInt(match[2], 10);
-    return { prefix: prefix || 'Équipe', number, isNumbered: true };
+  const lastSpaceIndex = trimmed.lastIndexOf(' ');
+  if (lastSpaceIndex !== -1) {
+    const potentialNumber = trimmed.slice(lastSpaceIndex + 1);
+    if (/^\d+$/.test(potentialNumber)) {
+      const prefix = trimmed.slice(0, lastSpaceIndex).trim();
+      const number = Number.parseInt(potentialNumber, 10);
+      return { prefix: prefix || 'Équipe', number, isNumbered: true };
+    }
   }
   return { prefix: trimmed, number: null, isNumbered: false };
 }

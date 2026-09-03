@@ -39,7 +39,7 @@ export const TeamMarker = memo(function TeamMarker({
   onConfigure,
   onUpdateStatus
 }: Readonly<TeamMarkerProps>) {
-  const [hoveredStatus, setIsHovered] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [isRadialOpen, setIsRadialOpen] = useState(false);
   const lastClickTimeRef = useRef<number>(0);
   const rightClickPressTimeRef = useRef<number>(0);
@@ -63,7 +63,7 @@ export const TeamMarker = memo(function TeamMarker({
     top: `${team.pos_y}%`,
     transform: `translate(-50%, -100%) scale(${1 / zoomScale})`,
     transformOrigin: 'bottom center',
-    zIndex: getZIndex(hoveredStatus, isSelected, team.status, isRadialOpen),
+    zIndex: getZIndex(isHovered, isSelected, team.status, isRadialOpen),
     cursor: isDraggable ? 'grab' : 'default',
     touchAction: 'none',
   };
