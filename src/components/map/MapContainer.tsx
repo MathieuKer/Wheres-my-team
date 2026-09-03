@@ -1,4 +1,4 @@
-import { useRef, useState, useEffect, useCallback } from 'react';
+import { useRef, useState, useEffect, useCallback, memo } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import type { ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
 import type { Team, Zone, TeamStatus, TeamSpecialty, Intervention, InterventionPriority } from '../../types';
@@ -565,6 +565,86 @@ const InterventionConfigModal = ({
   );
 };
 
+function getActivePosition(
+  base: { id: string; x: number; y: number },
+  dragOffset: { dx: number; dy: number } | null,
+  activeDragId: string | null,
+  isSelected: boolean,
+  isDragIdSelected: boolean
+) {
+  let { x, y } = base;
+  if (dragOffset && activeDragId) {
+    const isMoving = base.id === activeDragId || (isDragIdSelected && isSelected);
+    if (isMoving) {
+      x = Math.max(0, Math.min(100, x + dragOffset.dx));
+      y = Math.max(0, Math.min(100, y + dragOffset.dy));
+    }
+  }
+  return { x, y };
+}
+
+interface InterventionConnectionLinesProps {
+  interventions: Intervention[];
+  teams: Team[];
+  dragOffset: { dx: number; dy: number } | null;
+  activeDragId: string | null;
+  selectedTeamIds: string[];
+  selectedInterventionIds: string[];
+}
+
+const InterventionConnectionLines = memo(function InterventionConnectionLines({
+  interventions,
+  teams,
+  dragOffset,
+  activeDragId,
+  selectedTeamIds,
+  selectedInterventionIds
+}: Readonly<InterventionConnectionLinesProps>) {
+  const isDragIdSelected = activeDragId 
+    ? (selectedTeamIds.includes(activeDragId) || selectedInterventionIds.includes(activeDragId)) 
+    : false;
+
+  return (
+    <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
+      {interventions.map((intervention) => {
+        if (!intervention.assigned_team_id) return null;
+        const team = teams.find(t => t.id === intervention.assigned_team_id);
+        if (!team) return null;
+
+        const teamPos = getActivePosition(
+          { id: team.id, x: team.pos_x, y: team.pos_y },
+          dragOffset,
+          activeDragId,
+          selectedTeamIds.includes(team.id),
+          isDragIdSelected
+        );
+
+        const intPos = getActivePosition(
+          { id: intervention.id, x: intervention.pos_x, y: intervention.pos_y },
+          dragOffset,
+          activeDragId,
+          selectedInterventionIds.includes(intervention.id),
+          isDragIdSelected
+        );
+
+        return (
+          <line
+            key={`link-${intervention.id}`}
+            x1={`${teamPos.x}%`}
+            y1={`${teamPos.y}%`}
+            x2={`${intPos.x}%`}
+            y2={`${intPos.y}%`}
+            stroke={team.color}
+            strokeWidth="2"
+            strokeDasharray="4 4"
+            className="opacity-70"
+          />
+        );
+      })}
+    </svg>
+  );
+});
+
 export function MapContainer({ 
   mapUrl, 
   teams, 
@@ -685,67 +765,72 @@ export function MapContainer({
     }
   };
 
+  const finalizeZoneCreation = (start: { x: number; y: number }, current: { x: number; y: number }) => {
+    const width = Math.abs(current.x - start.x);
+    const height = Math.abs(current.y - start.y);
+
+    if (width > 1 && height > 1) {
+      onZoneCreate({
+        name: `Zone ${zones.length + 1}`,
+        color: '#3b82f6',
+        rotation: 0,
+        bounds: {
+          x: Math.min(start.x, current.x),
+          y: Math.min(start.y, current.y),
+          width,
+          height
+        }
+      });
+    }
+
+    setIsDrawing(false);
+    setDrawStart(null);
+    setDrawCurrent(null);
+  };
+
+  const finalizeLassoSelection = (start: { x: number; y: number }, current: { x: number; y: number }, isCtrl: boolean) => {
+    const width = Math.abs(current.x - start.x);
+    const height = Math.abs(current.y - start.y);
+
+    if (width < 0.5 && height < 0.5) {
+      setSelectedTeamIds([]);
+      setSelectedInterventionIds([]);
+    } else {
+      const minX = Math.min(start.x, current.x);
+      const maxX = Math.max(start.x, current.x);
+      const minY = Math.min(start.y, current.y);
+      const maxY = Math.max(start.y, current.y);
+
+      const newlySelectedTeams = teams
+        .filter(t => t.pos_x >= minX && t.pos_x <= maxX && t.pos_y >= minY && t.pos_y <= maxY)
+        .map(t => t.id);
+
+      setSelectedTeamIds(newlySelectedTeams);
+
+      if (isCtrl) {
+        const newlySelectedInterventions = interventions
+          .filter(i => i.pos_x >= minX && i.pos_x <= maxX && i.pos_y >= minY && i.pos_y <= maxY)
+          .map(i => i.id);
+        setSelectedInterventionIds(newlySelectedInterventions);
+      } else {
+        setSelectedInterventionIds([]);
+      }
+    }
+
+    setIsSelecting(false);
+    setSelectStart(null);
+    setSelectCurrent(null);
+  };
+
   const handlePointerUp = (e?: React.PointerEvent) => {
     if (isDrawing && drawStart && drawCurrent) {
-      const width = Math.abs(drawCurrent.x - drawStart.x);
-      const height = Math.abs(drawCurrent.y - drawStart.y);
-
-      if (width > 1 && height > 1) {
-        onZoneCreate({
-          name: `Zone ${zones.length + 1}`,
-          color: '#3b82f6',
-          rotation: 0,
-          bounds: {
-            x: Math.min(drawStart.x, drawCurrent.x),
-            y: Math.min(drawStart.y, drawCurrent.y),
-            width,
-            height
-          }
-        });
-      }
-
-      setIsDrawing(false);
-      setDrawStart(null);
-      setDrawCurrent(null);
+      finalizeZoneCreation(drawStart, drawCurrent);
       return;
     }
 
     if (isSelecting && selectStart && selectCurrent) {
-      const width = Math.abs(selectCurrent.x - selectStart.x);
-      const height = Math.abs(selectCurrent.y - selectStart.y);
-
-      if (width < 0.5 && height < 0.5) {
-        // Clic simple sur le fond : vide la sélection
-        setSelectedTeamIds([]);
-        setSelectedInterventionIds([]);
-      } else {
-        // Rectangle de sélection lasso
-        const minX = Math.min(selectStart.x, selectCurrent.x);
-        const maxX = Math.max(selectStart.x, selectCurrent.x);
-        const minY = Math.min(selectStart.y, selectCurrent.y);
-        const maxY = Math.max(selectStart.y, selectCurrent.y);
-
-        const newlySelectedTeams = teams
-          .filter(t => t.pos_x >= minX && t.pos_x <= maxX && t.pos_y >= minY && t.pos_y <= maxY)
-          .map(t => t.id);
-
-        setSelectedTeamIds(newlySelectedTeams);
-
-        // Simple lasso = juste les équipes. lasso + CTRL = équipe + interventions
-        const isCtrl = e ? (e.ctrlKey || e.metaKey) : false;
-        if (isCtrl) {
-          const newlySelectedInterventions = interventions
-            .filter(i => i.pos_x >= minX && i.pos_x <= maxX && i.pos_y >= minY && i.pos_y <= maxY)
-            .map(i => i.id);
-          setSelectedInterventionIds(newlySelectedInterventions);
-        } else {
-          setSelectedInterventionIds([]);
-        }
-      }
-
-      setIsSelecting(false);
-      setSelectStart(null);
-      setSelectCurrent(null);
+      const isCtrl = e ? (e.ctrlKey || e.metaKey) : false;
+      finalizeLassoSelection(selectStart, selectCurrent, isCtrl);
     }
   };
 
@@ -778,89 +863,84 @@ export function MapContainer({
     setDragOffset({ dx, dy });
   };
 
+  const handleGroupDragEnd = (dx: number, dy: number) => {
+    if (selectedTeamIds.length > 0) {
+      const moves = selectedTeamIds.map(tid => {
+        const t = teams.find(team => team.id === tid);
+        if (!t) return null;
+        return {
+          id: tid,
+          x: Math.max(0, Math.min(100, t.pos_x + dx)),
+          y: Math.max(0, Math.min(100, t.pos_y + dy)),
+        };
+      }).filter(Boolean) as { id: string; x: number; y: number }[];
+      onTeamsMove(moves);
+    }
+
+    if (selectedInterventionIds.length > 0 && onInterventionsMove) {
+      const moves = selectedInterventionIds.map(iid => {
+        const int = interventions.find(i => i.id === iid);
+        if (!int) return null;
+        return {
+          id: iid,
+          x: Math.max(0, Math.min(100, int.pos_x + dx)),
+          y: Math.max(0, Math.min(100, int.pos_y + dy)),
+        };
+      }).filter(Boolean) as { id: string; x: number; y: number }[];
+      onInterventionsMove(moves);
+    }
+  };
+
+  const handleSingleTeamDragEnd = (team: Team, dx: number, dy: number) => {
+    const newX = Math.max(0, Math.min(100, team.pos_x + dx));
+    const newY = Math.max(0, Math.min(100, team.pos_y + dy));
+
+    // Drag and drop assignment detection
+    const threshold = 4.0;
+    let nearestIntervention: Intervention | null = null;
+    let minDistance = threshold;
+
+    interventions.forEach(intervention => {
+      const dist = Math.hypot(newX - intervention.pos_x, newY - intervention.pos_y);
+      if (dist < minDistance) {
+        minDistance = dist;
+        nearestIntervention = intervention;
+      }
+    });
+
+    if (nearestIntervention && onInterventionUpdate) {
+      const targetIntId = (nearestIntervention as Intervention).id;
+      const otherInts = interventions.filter(i => i.assigned_team_id === team.id && i.id !== targetIntId);
+      for (const otherInt of otherInts) {
+        onInterventionUpdate(otherInt.id, { assigned_team_id: null });
+      }
+      onInterventionUpdate(targetIntId, { assigned_team_id: team.id });
+      onTeamsMove([{ id: team.id, x: (nearestIntervention as Intervention).pos_x, y: (nearestIntervention as Intervention).pos_y }]);
+    } else {
+      onTeamsMove([{ id: team.id, x: newX, y: newY }]);
+    }
+  };
+
   const handleDragEnd = async (id: string, dx: number, dy: number) => {
-    const isIntervention = interventions.some(i => i.id === id);
-    const isMovedTeamSelected = selectedTeamIds.includes(id);
-    const isMovedInterventionSelected = selectedInterventionIds.includes(id);
-    const isGroupDrag = isMovedTeamSelected || isMovedInterventionSelected;
+    const isGroupDrag = selectedTeamIds.includes(id) || selectedInterventionIds.includes(id);
 
     if (isGroupDrag) {
-      // 1. Move all selected teams in database
-      if (selectedTeamIds.length > 0) {
-        const moves = selectedTeamIds.map(tid => {
-          const t = teams.find(team => team.id === tid);
-          if (!t) return null;
-          const newX = Math.max(0, Math.min(100, t.pos_x + dx));
-          const newY = Math.max(0, Math.min(100, t.pos_y + dy));
-          return { id: tid, x: newX, y: newY };
-        }).filter(Boolean) as { id: string; x: number; y: number }[];
-        onTeamsMove(moves);
-      }
-
-      // 2. Move all selected interventions in database
-      if (selectedInterventionIds.length > 0 && onInterventionsMove) {
-        const moves = selectedInterventionIds.map(iid => {
-          const int = interventions.find(i => i.id === iid);
-          if (!int) return null;
-          const newX = Math.max(0, Math.min(100, int.pos_x + dx));
-          const newY = Math.max(0, Math.min(100, int.pos_y + dy));
-          return { id: iid, x: newX, y: newY };
-        }).filter(Boolean) as { id: string; x: number; y: number }[];
-        onInterventionsMove(moves);
-      }
-
-      setActiveDragId(null);
-      setDragOffset(null);
-      return;
-    }
-
-    if (isIntervention && onInterventionUpdate) {
-      const int = interventions.find(i => i.id === id);
-      if (int) {
-        const newX = Math.max(0, Math.min(100, int.pos_x + dx));
-        const newY = Math.max(0, Math.min(100, int.pos_y + dy));
-        onInterventionUpdate(id, { pos_x: newX, pos_y: newY });
-      }
-      setActiveDragId(null);
-      setDragOffset(null);
-      return;
-    }
-
-    const t = teams.find(team => team.id === id);
-    if (t) {
-      const newX = Math.max(0, Math.min(100, t.pos_x + dx));
-      const newY = Math.max(0, Math.min(100, t.pos_y + dy));
-
-      // Drag and drop assignment detection
-      const threshold = 4.0; // 4% map distance threshold
-      let nearestIntervention: Intervention | null = null;
-      let minDistance = threshold;
-
-      interventions.forEach(intervention => {
-        const idx = newX - intervention.pos_x;
-        const idy = newY - intervention.pos_y;
-        const dist = Math.hypot(idx, idy);
-        if (dist < minDistance) {
-          minDistance = dist;
-          nearestIntervention = intervention;
+      handleGroupDragEnd(dx, dy);
+    } else {
+      const isIntervention = interventions.some(i => i.id === id);
+      if (isIntervention && onInterventionUpdate) {
+        const int = interventions.find(i => i.id === id);
+        if (int) {
+          onInterventionUpdate(id, {
+            pos_x: Math.max(0, Math.min(100, int.pos_x + dx)),
+            pos_y: Math.max(0, Math.min(100, int.pos_y + dy))
+          });
         }
-      });
-
-      if (nearestIntervention && onInterventionUpdate) {
-        // Unassign this team from any other intervention first to prevent dual assignment
-        const otherInts = interventions.filter(i => i.assigned_team_id === t.id && i.id !== (nearestIntervention as Intervention).id);
-        for (const otherInt of otherInts) {
-          onInterventionUpdate(otherInt.id, { assigned_team_id: null });
-        }
-
-        // Assign to the new intervention
-        onInterventionUpdate((nearestIntervention as Intervention).id, { assigned_team_id: t.id });
-
-        // Snap the team position to the intervention position
-        onTeamsMove([{ id, x: (nearestIntervention as Intervention).pos_x, y: (nearestIntervention as Intervention).pos_y }]);
       } else {
-        // Normal move
-        onTeamsMove([{ id, x: newX, y: newY }]);
+        const t = teams.find(team => team.id === id);
+        if (t) {
+          handleSingleTeamDragEnd(t, dx, dy);
+        }
       }
     }
 
@@ -1019,52 +1099,14 @@ export function MapContainer({
 
             {/* SVG Connection lines between teams and interventions */}
             {showInterventions && (mode === 'deployment' || mode === 'reader') && (
-              <svg className="absolute inset-0 w-full h-full pointer-events-none z-0">
-                {interventions.map((intervention) => {
-                  if (intervention.assigned_team_id) {
-                    const team = teams.find(t => t.id === intervention.assigned_team_id);
-                    if (team) {
-                      // Calculate active coordinates taking into account any ongoing drag coordinates
-                      let teamX = team.pos_x;
-                      let teamY = team.pos_y;
-                      if (dragOffset && activeDragId) {
-                        const isDragIdSelected = selectedTeamIds.includes(activeDragId) || selectedInterventionIds.includes(activeDragId);
-                        const isMoving = team.id === activeDragId || (isDragIdSelected && selectedTeamIds.includes(team.id));
-                        if (isMoving) {
-                          teamX = Math.max(0, Math.min(100, teamX + dragOffset.dx));
-                          teamY = Math.max(0, Math.min(100, teamY + dragOffset.dy));
-                        }
-                      }
-
-                      let intX = intervention.pos_x;
-                      let intY = intervention.pos_y;
-                      if (dragOffset && activeDragId) {
-                        const isDragIdSelected = selectedTeamIds.includes(activeDragId) || selectedInterventionIds.includes(activeDragId);
-                        const isMoving = intervention.id === activeDragId || (isDragIdSelected && selectedInterventionIds.includes(intervention.id));
-                        if (isMoving) {
-                          intX = Math.max(0, Math.min(100, intX + dragOffset.dx));
-                          intY = Math.max(0, Math.min(100, intY + dragOffset.dy));
-                        }
-                      }
-
-                      return (
-                        <line
-                          key={`link-${intervention.id}`}
-                          x1={`${teamX}%`}
-                          y1={`${teamY}%`}
-                          x2={`${intX}%`}
-                          y2={`${intY}%`}
-                          stroke={team.color}
-                          strokeWidth="2"
-                          strokeDasharray="4 4"
-                          className="opacity-70"
-                        />
-                      );
-                    }
-                  }
-                  return null;
-                })}
-              </svg>
+              <InterventionConnectionLines
+                interventions={interventions}
+                teams={teams}
+                dragOffset={dragOffset}
+                activeDragId={activeDragId}
+                selectedTeamIds={selectedTeamIds}
+                selectedInterventionIds={selectedInterventionIds}
+              />
             )}
 
             {/* Les marqueurs par-dessus */}

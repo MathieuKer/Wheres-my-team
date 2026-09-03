@@ -103,6 +103,172 @@ interface TeamRowProps {
   onTeamsMove?: (moves: { id: string; x: number; y: number }[]) => void;
 }
 
+interface TeamRowNoteEditorProps {
+  team: Team;
+  isReadOnly: boolean;
+  initialDescription: string;
+  onClose: () => void;
+  onSave: (desc: string) => void;
+}
+
+function TeamRowNoteEditor({
+  team,
+  isReadOnly,
+  initialDescription,
+  onClose,
+  onSave
+}: Readonly<TeamRowNoteEditorProps>) {
+  const [description, setDescription] = useState(team.description ?? '');
+
+  const handleSave = () => {
+    const currentDbVal = team.description ?? '';
+    if (currentDbVal !== initialDescription) {
+      const force = globalThis.confirm(
+        "Attention : Cette note a été modifiée par un autre utilisateur en arrière-plan.\n" +
+        "Voulez-vous forcer l'enregistrement et écraser ses modifications ?"
+      );
+      if (!force) {
+        setDescription(currentDbVal);
+        onClose();
+        return;
+      }
+    }
+    onSave(description.trim());
+    onClose();
+  };
+
+  return (
+    <div className="mt-1.5 p-3 bg-black/40 rounded-xl border border-white/5 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-200">
+      <div className="flex justify-between items-center">
+        <label htmlFor={`note-${team.id}`} className="text-[10px] uppercase tracking-wider text-slate-500 font-bold font-display">
+          Note de l'unité
+        </label>
+        {!isReadOnly && (team.description ?? '') !== initialDescription && (
+          <span className="text-[10px] text-amber-400 font-semibold animate-pulse">
+            ⚠️ Modifiée en arrière-plan
+          </span>
+        )}
+      </div>
+      {isReadOnly ? (
+        <div className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed py-1">
+          {team.description || <span className="italic text-slate-600">Aucune note pour cette unité</span>}
+        </div>
+      ) : (
+        <>
+          <textarea
+            id={`note-${team.id}`}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Membres, matériel, consignes..."
+            className="bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500/30 min-h-[60px] resize-y"
+          />
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              Annuler
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              className="px-3 py-1 text-[11px] bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-md transition-colors shadow-md shadow-blue-500/10 cursor-pointer"
+            >
+              Enregistrer
+            </button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+interface TeamRowContextMenuProps {
+  team: Team;
+  pos: { x: number; y: number };
+  onClose: () => void;
+  onUpdateStatus: (id: string, status: TeamStatus) => void;
+  onUpdateSpecialty?: (id: string, specialty: TeamSpecialty | null) => void;
+}
+
+function TeamRowContextMenu({
+  team,
+  pos,
+  onClose,
+  onUpdateStatus,
+  onUpdateSpecialty
+}: Readonly<TeamRowContextMenuProps>) {
+  return (
+    <div 
+      className="absolute bg-slate-950/95 border border-white/10 rounded-xl py-1 shadow-2xl z-[100] w-40 text-left font-display animate-in fade-in duration-100"
+      style={{ left: pos.x, top: pos.y }}
+      onPointerDown={(e) => e.stopPropagation()}
+    >
+      <div className="px-3 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-white/5 mb-1">
+        Changer statut
+      </div>
+      <button 
+        type="button"
+        onClick={() => { onUpdateStatus(team.id, 'dispo'); onClose(); }}
+        className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-400 font-semibold flex items-center gap-2 cursor-pointer"
+      >
+        <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+        <span>Disponible</span>
+      </button>
+      <button 
+        type="button"
+        onClick={() => { onUpdateStatus(team.id, 'en_route'); onClose(); }}
+        className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-blue-500/20 hover:text-blue-400 font-semibold flex items-center gap-2 cursor-pointer"
+      >
+        <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+        <span>En direction</span>
+      </button>
+      <button 
+        type="button"
+        onClick={() => { onUpdateStatus(team.id, 'intervention'); onClose(); }}
+        className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-red-500/20 hover:text-red-400 font-semibold flex items-center gap-2 cursor-pointer"
+      >
+        <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+        <span>Intervention</span>
+      </button>
+      <button 
+        type="button"
+        onClick={() => { onUpdateStatus(team.id, 'pause'); onClose(); }}
+        className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-amber-500/20 hover:text-amber-400 font-semibold flex items-center gap-2 cursor-pointer"
+      >
+        <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+        <span>En pause</span>
+      </button>
+
+      {onUpdateSpecialty && (
+        <>
+          <div className="px-3 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-t border-b border-white/5 my-1">
+            Changer Rôle
+          </div>
+          {SPECIALTY_LIST.map((spec) => {
+            const isCurrent = (team.specialty || 'terrain') === spec.id;
+            const SpecIcon = spec.icon;
+            return (
+              <button
+                key={spec.id}
+                type="button"
+                onClick={() => { onUpdateSpecialty(team.id, spec.id); onClose(); }}
+                className={`w-full text-left px-3 py-1.5 text-xs font-semibold flex items-center gap-2 cursor-pointer ${
+                  isCurrent ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
+                }`}
+              >
+                <SpecIcon className="w-3 h-3 shrink-0" />
+                <span>{spec.label}</span>
+              </button>
+            );
+          })}
+        </>
+      )}
+    </div>
+  );
+}
+
 const TeamRow = memo(function TeamRow({
   team,
   onUpdateStatus,
@@ -116,7 +282,6 @@ const TeamRow = memo(function TeamRow({
   onTeamsMove
 }: Readonly<TeamRowProps>) {
   const [isEditing, setIsEditing] = useState(false);
-  const [description, setDescription] = useState(team.description ?? '');
   const [initialDescription, setInitialDescription] = useState(team.description ?? '');
   const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number } | null>(null);
 
@@ -155,24 +320,6 @@ const TeamRow = memo(function TeamRow({
   } else if (team.description) {
     noteButtonClassName = `text-blue-400 hover:bg-white/5 ${btnPadding}`;
   }
-
-  const handleSave = () => {
-    const currentDbVal = team.description ?? '';
-    if (currentDbVal !== initialDescription) {
-      const force = globalThis.confirm(
-        "Attention : Cette note a été modifiée par un autre utilisateur en arrière-plan.\n" +
-        "Voulez-vous forcer l'enregistrement et écraser ses modifications ?"
-      );
-      if (!force) {
-        setDescription(currentDbVal);
-        setInitialDescription(currentDbVal);
-        setIsEditing(false);
-        return;
-      }
-    }
-    onUpdateDescription(team.id, description.trim() || null);
-    setIsEditing(false);
-  };
 
   const specialtyConfig = getSpecialtyConfig(team.specialty);
   const RoleIcon = specialtyConfig.icon;
@@ -237,7 +384,6 @@ const TeamRow = memo(function TeamRow({
           type="button"
           onClick={() => {
             if (!isEditing) {
-              setDescription(team.description ?? '');
               setInitialDescription(team.description ?? '');
             }
             setIsEditing(!isEditing);
@@ -274,119 +420,24 @@ const TeamRow = memo(function TeamRow({
 
       {/* Expandable description editor */}
       {isEditing && (
-        <div className="mt-1.5 p-3 bg-black/40 rounded-xl border border-white/5 flex flex-col gap-2 animate-in slide-in-from-top-2 duration-200">
-          <div className="flex justify-between items-center">
-            <label htmlFor={`note-${team.id}`} className="text-[10px] uppercase tracking-wider text-slate-500 font-bold font-display">
-              Note de l'unité
-            </label>
-            {!isReadOnly && (team.description ?? '') !== initialDescription && (
-              <span className="text-[10px] text-amber-400 font-semibold animate-pulse">
-                ⚠️ Modifiée en arrière-plan
-              </span>
-            )}
-          </div>
-          {isReadOnly ? (
-            <div className="text-xs text-slate-300 whitespace-pre-wrap leading-relaxed py-1">
-              {team.description || <span className="italic text-slate-600">Aucune note pour cette unité</span>}
-            </div>
-          ) : (
-            <>
-              <textarea
-                id={`note-${team.id}`}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Membres, matériel, consignes..."
-                className="bg-white/5 border border-white/10 rounded-lg p-2 text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500/30 min-h-[60px] resize-y"
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(false)}
-                  className="px-2.5 py-1 text-[11px] text-slate-400 hover:text-slate-200 transition-colors"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleSave}
-                  className="px-3 py-1 text-[11px] bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-md transition-colors shadow-md shadow-blue-500/10"
-                >
-                  Enregistrer
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+        <TeamRowNoteEditor
+          team={team}
+          isReadOnly={isReadOnly}
+          initialDescription={initialDescription}
+          onClose={() => setIsEditing(false)}
+          onSave={(desc) => onUpdateDescription(team.id, desc || null)}
+        />
       )}
 
       {/* Right-click Custom Context Menu */}
       {contextMenuPos && (
-        <div 
-          className="absolute bg-slate-950/95 border border-white/10 rounded-xl py-1 shadow-2xl z-[100] w-40 text-left font-display animate-in fade-in duration-100"
-          style={{ left: contextMenuPos.x, top: contextMenuPos.y }}
-          onPointerDown={(e) => e.stopPropagation()}
-        >
-          <div className="px-3 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-b border-white/5 mb-1">
-            Changer statut
-          </div>
-          <button 
-            type="button"
-            onClick={() => { onUpdateStatus(team.id, 'dispo'); setContextMenuPos(null); }}
-            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-emerald-500/20 hover:text-emerald-400 font-semibold flex items-center gap-2"
-          >
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            <span>Disponible</span>
-          </button>
-          <button 
-            type="button"
-            onClick={() => { onUpdateStatus(team.id, 'en_route'); setContextMenuPos(null); }}
-            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-blue-500/20 hover:text-blue-400 font-semibold flex items-center gap-2"
-          >
-            <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-            <span>En direction</span>
-          </button>
-          <button 
-            type="button"
-            onClick={() => { onUpdateStatus(team.id, 'intervention'); setContextMenuPos(null); }}
-            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-red-500/20 hover:text-red-400 font-semibold flex items-center gap-2"
-          >
-            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
-            <span>Intervention</span>
-          </button>
-          <button 
-            type="button"
-            onClick={() => { onUpdateStatus(team.id, 'pause'); setContextMenuPos(null); }}
-            className="w-full text-left px-3 py-1.5 text-xs text-slate-300 hover:bg-amber-500/20 hover:text-amber-400 font-semibold flex items-center gap-2"
-          >
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-            <span>En pause</span>
-          </button>
-
-          {onUpdateSpecialty && (
-            <>
-              <div className="px-3 py-1 text-[9px] font-bold text-slate-500 uppercase tracking-wider border-t border-b border-white/5 my-1">
-                Changer Rôle
-              </div>
-              {SPECIALTY_LIST.map((spec) => {
-                const isCurrent = (team.specialty || 'terrain') === spec.id;
-                const SpecIcon = spec.icon;
-                return (
-                  <button
-                    key={spec.id}
-                    type="button"
-                    onClick={() => { onUpdateSpecialty(team.id, spec.id); setContextMenuPos(null); }}
-                    className={`w-full text-left px-3 py-1.5 text-xs font-semibold flex items-center gap-2 ${
-                      isCurrent ? 'bg-white/10 text-white' : 'text-slate-400 hover:bg-white/5 hover:text-slate-200'
-                    }`}
-                  >
-                    <SpecIcon className="w-3 h-3 shrink-0" />
-                    <span>{spec.label}</span>
-                  </button>
-                );
-              })}
-            </>
-          )}
-        </div>
+        <TeamRowContextMenu
+          team={team}
+          pos={contextMenuPos}
+          onClose={() => setContextMenuPos(null)}
+          onUpdateStatus={onUpdateStatus}
+          onUpdateSpecialty={onUpdateSpecialty}
+        />
       )}
     </div>
   );
@@ -1199,18 +1250,13 @@ export const Sidebar = memo(function Sidebar({
                 return (
                   <div 
                     key={intervention.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => onConfigureIntervention?.(intervention.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        onConfigureIntervention?.(intervention.id);
-                      }
-                    }}
-                    className="flex flex-col gap-1.5 p-3 rounded-xl border border-white/5 bg-slate-950/25 text-slate-300 relative group/int hover:border-white/10 hover:bg-slate-950/40 transition-all shadow-sm cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/50"
+                    className="flex items-center justify-between gap-3 p-3 rounded-xl border border-white/5 bg-slate-950/25 text-slate-300 relative group/int hover:border-white/10 hover:bg-slate-950/40 transition-all shadow-sm"
                   >
-                    <div className="flex items-center justify-between gap-3">
+                    <button
+                      type="button"
+                      onClick={() => onConfigureIntervention?.(intervention.id)}
+                      className="flex-1 min-w-0 text-left flex items-center justify-between gap-3 cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500/50 rounded"
+                    >
                       <div className="flex items-center gap-2 min-w-0">
                         {/* Priority Badge */}
                         <span className={`text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shrink-0 shadow-md ${getPriorityBadgeClass(intervention.priority)}`}>
@@ -1239,24 +1285,25 @@ export const Sidebar = memo(function Sidebar({
                             Non assignée
                           </span>
                         )}
-                        {/* Delete button (resolve) */}
-                        {mode === 'deployment' && onDeleteIntervention && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (confirm(`Voulez-vous résoudre et clôturer l'intervention #${intervention.number} ?`)) {
-                                onDeleteIntervention(intervention.id);
-                              }
-                            }}
-                            className="text-slate-600 hover:text-red-400 p-0.5 rounded transition-colors cursor-pointer"
-                            title="Résoudre l'intervention"
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        )}
                       </div>
-                    </div>
+                    </button>
+
+                    {/* Delete button (resolve) */}
+                    {mode === 'deployment' && onDeleteIntervention && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Voulez-vous résoudre et clôturer l'intervention #${intervention.number} ?`)) {
+                            onDeleteIntervention(intervention.id);
+                          }
+                        }}
+                        className="text-slate-600 hover:text-red-400 p-0.5 rounded transition-colors cursor-pointer shrink-0"
+                        title="Résoudre l'intervention"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 );
               })}
